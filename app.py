@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
 import datetime
+import calendar
 import google.generativeai as genai
 
-# Configuração visual avançada para replicar o Juris Control
+# Configuração visual do sistema
 st.set_page_config(
     page_title="Painel de Controle Pessoal",
     page_icon="⚖️",
@@ -11,36 +12,82 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS customizada (Layout idêntico à imagem)
+# Estilização CSS: Fonte Plus Jakarta Sans, Cores Customizadas e Calendário
 st.markdown("""
 <style>
-    /* Estilo do Menu Lateral */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+    html, body, [class*="css"], .stMarkdown, button, input, select, textarea {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    /* BARRA LATERAL (#351c75 com texto branco) */
     [data-testid="stSidebar"] {
-        background-color: #0b132b;
-        color: #ffffff;
+        background-color: #351c75 !important;
+        color: #FFFFFF !important;
     }
     
-    /* Ajustes dos botões do menu */
-    .stRadio > label {
-        color: #8d99ae !important;
-        font-weight: 600;
+    [data-testid="stSidebar"] *, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] label {
+        color: #FFFFFF !important;
+    }
+
+    /* ÁREA PRINCIPAL (Fundo claro com texto escuro) */
+    .main {
+        background-color: #F8F9FA;
+        color: #1A1A1A;
+    }
+
+    /* Estilo das caixas do Calendário */
+    .cal-day-header {
+        text-align: center;
+        font-weight: 700;
+        background-color: #ECECF0;
+        padding: 5px;
+        border-radius: 4px;
+        color: #351c75;
     }
     
-    /* Cards de métricas estilo Topbar */
-    div[data-testid="stMetricValue"] {
-        font-size: 20px !important;
-        color: #1c2541;
-    }
-    div[data-testid="stMetric"] {
-        background-color: #f4f5f6;
+    .cal-day-box {
+        background-color: #FFFFFF;
+        border: 1px solid #E0E0E0;
         border-radius: 6px;
-        padding: 10px 15px;
-        border-left: 4px solid #3a86ff;
+        min-height: 90px;
+        padding: 6px;
+        margin-bottom: 5px;
+    }
+    
+    .cal-day-box-today {
+        background-color: #F0EBFB;
+        border: 2px solid #351c75;
+        border-radius: 6px;
+        min-height: 90px;
+        padding: 6px;
+        margin-bottom: 5px;
+    }
+
+    .cal-date-num {
+        font-weight: bold;
+        font-size: 12px;
+        color: #351c75;
+        margin-bottom: 4px;
+    }
+
+    .task-badge {
+        background-color: #351c75;
+        color: white !important;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 10px;
+        margin-top: 2px;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- BANCO DE DADOS EM SESSÃO ---
+# --- DADOS DA SESSÃO ---
 if 'gastos' not in st.session_state:
     st.session_state.gastos = pd.DataFrame([
         {"Item": "Cartão de Crédito", "Categoria": "Fixo", "Valor": 1250.0, "Status": "Pendente", "Vencimento": datetime.date.today()},
@@ -58,34 +105,32 @@ if 'desejos' not in st.session_state:
         {"Desejo": "Notebook Novo", "Valor Estimado": 4500.0, "Status": "Planejando"}
     ])
 
-# --- BARRA LATERAL (ASSISTENTE E NAVEGAÇÃO CORPORATIVA) ---
+# --- BARRA LATERAL ROXA (#351c75) COM ÍCONES DE CONTORNO ---
 with st.sidebar:
     st.markdown("### 🏛️ **Painel Pessoal**")
-    st.caption("v1.0.0 | Usuário Administrador")
+    st.caption("v1.0.0 | Acesso Privado")
     st.divider()
     
-    # Nomes fiéis às suas planilhas e à estrutura da imagem
+    # Nomes com ícones minimalistas de contorno
     menu = st.radio("MÓDULOS DO SISTEMA", [
-        "📌 Painel de Controle", 
+        "📑 Painel de Controle", 
         "💳 Financeiro & Gastos", 
-        "⏳ Metas & Prazos", 
+        "🗓️ Metas & Prazos", 
         "🎯 Lista de Desejos"
     ])
     
     st.divider()
     
-    # Assistente IA Integrado Imediatamente
-    st.markdown("### 🤖 **Assistente Gemini**")
-    api_key = st.text_input("Chave API Gemini:", type="password", help="Insira sua API Key do Google AI Studio")
+    st.markdown("### 💬 **Assistente Gemini**")
+    api_key = st.text_input("Chave API Gemini:", type="password", help="Insira sua chave do Google AI Studio")
     
-    # Leitor de Documentos Global
-    uploaded_file = st.file_drop_target if hasattr(st, 'file_drop_target') else st.file_uploader("Enviar comprovante ou documento:", type=['pdf', 'png', 'jpg', 'txt'])
+    uploaded_file = st.file_uploader("Enviar documento/comprovante:", type=['pdf', 'png', 'jpg', 'txt'])
     
-    pergunta_ia = st.text_area("O que deseja que o Gemini faça?", placeholder="Ex: Leia o documento acima e extraia o valor e vencimento.")
+    pergunta_ia = st.text_area("Instruções para o Gemini:", placeholder="Ex: Leia a imagem e adicione o gasto no meu financeiro.")
     
-    if st.button("Executar com IA"):
+    if st.button("Executar Assistente", use_container_width=True):
         if not api_key:
-            st.error("Insira a chave da API do Gemini acima.")
+            st.error("Insira a chave da API Gemini.")
         else:
             try:
                 genai.configure(api_key=api_key)
@@ -97,59 +142,94 @@ with st.sidebar:
                 Financeiro: {st.session_state.gastos.to_dict()}
                 """
                 
-                prompt_final = f"Contexto do Sistema:\n{contexto_dados}\n\nSolicitação: {pergunta_ia}"
+                prompt_final = f"Contexto:\n{contexto_dados}\n\nSolicitação: {pergunta_ia}"
                 
-                with st.spinner("Analisando dados..."):
+                with st.spinner("Analisando..."):
                     resposta = model.generate_content(prompt_final)
-                    st.info("### Resposta do Assistente:")
+                    st.info("### Resposta da IA:")
                     st.write(resposta.text)
             except Exception as e:
-                st.error(f"Erro ao processar: {e}")
+                st.error(f"Erro: {e}")
 
-# Cálculos do Caixa
+# Cálculos Financeiros
 entradas = st.session_state.gastos[st.session_state.gastos['Categoria'] == 'Entrada']['Valor'].sum()
 saidas = st.session_state.gastos[st.session_state.gastos['Categoria'] != 'Entrada']['Valor'].sum()
 saldo_capital = entradas - saidas
 
-# --- TOPBAR COM BUSCA E FILTROS (COMO NA IMAGEM) ---
+# --- TOPBAR ---
 st.markdown("## **Painel de Controle**")
 col_search, col_btn = st.columns([4, 1])
 with col_search:
-    st.text_input("🔍 Buscar tarefa, gasto, meta ou compromisso...", label_visibility="collapsed")
+    st.text_input("🔍 Buscar processo, cliente, tarefa...", label_visibility="collapsed")
 with col_btn:
     st.button("🔍 Pesquisar", use_container_width=True)
 
-# Indicadores em Banner (Topbar Visual)
+# Indicadores
 m1, m2, m3, m4, m5 = st.columns(5)
 m1.metric("Capital Livre", f"R$ {saldo_capital:,.2f}")
 m2.metric("Tarefas Hoje", len(st.session_state.tarefas))
 m3.metric("Contas a Vencer", len(st.session_state.gastos[st.session_state.gastos['Status'] == 'Pendente']))
-m4.metric("Prazos Mês", 3)
+m4.metric("Prazos Mês", len(st.session_state.tarefas[st.session_state.tarefas['Categoria'] == 'Prioridade']))
 m5.metric("Desejos Ativos", len(st.session_state.desejos))
 
 st.divider()
 
-# --- MÓDULO 1: PAINEL DE CONTROLE (AGENDA + FORMULÁRIO RETRÁTIL) ---
-if menu == "📌 Painel de Controle":
-    col_agenda, col_form = st.columns([2, 1])
+# --- MÓDULO 1: PAINEL DE CONTROLE COM CALENDÁRIO DINÂMICO ---
+if menu == "📑 Painel de Controle":
+    col_agenda, col_form = st.columns([2.2, 1])
     
     with col_agenda:
-        st.markdown("### 📅 Agenda & Prazos do Mês")
-        # Visualização estilo tabela/calendário central
-        st.dataframe(st.session_state.tarefas, use_container_width=True, height=400)
+        # Lógica do Calendário Automático
+        hoje = datetime.date.today()
+        st.markdown(f"### 📅 **Agenda de {hoje.strftime('%B de %Y').capitalize()}**")
+        
+        # Estrutura de Dias da Semana
+        dias_semana = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"]
+        cols_header = st.columns(7)
+        for i, dia_nome in enumerate(dias_semana):
+            cols_header[i].markdown(f"<div class='cal-day-header'>{dia_nome}</div>", unsafe_allow_html=True)
+            
+        # Matriz de Dias do Mês
+        cal = calendar.Calendar(firstweekday=6) # 6 = Domingo
+        dias_mes = cal.monthdatescalendar(hoje.year, hoje.month)
+        
+        for semana in dias_mes:
+            cols_semana = st.columns(7)
+            for i, dia in enumerate(semana):
+                with cols_semana[i]:
+                    # Destaca o dia de hoje
+                    box_class = "cal-day-box-today" if dia == hoje else "cal-day-box"
+                    
+                    # Filtra tarefas pertencentes a este dia específico do calendário
+                    tarefas_dia = st.session_state.tarefas[st.session_state.tarefas['Prazo'] == dia]
+                    
+                    html_tasks = ""
+                    for _, t in tarefas_dia.iterrows():
+                        html_tasks += f"<div class='task-badge' title='{t['Título']}'>{t['Título']}</div>"
+                    
+                    # Mostra os dias apenas do mês atual com cor normal
+                    cor_num = "#351c75" if dia.month == hoje.month else "#A0A0A0"
+                    
+                    st.markdown(f"""
+                        <div class='{box_class}'>
+                            <div class='cal-date-num' style='color: {cor_num};'>{dia.day}</div>
+                            {html_tasks}
+                        </div>
+                    """, unsafe_allow_html=True)
         
     with col_form:
         st.markdown("### **+ Adicionar Tarefa / Prazo**")
         with st.form("form_novo_item"):
-            titulo = st.text_input("Título:")
+            titulo = st.text_input("Título da Tarefa:")
             cat = st.selectbox("Categoria:", ["Prioridade", "Metas", "Rotina Diária"])
-            prazo_item = st.date_input("Prazo Final:", datetime.date.today())
+            prazo_item = st.date_input("Data do Prazo:", datetime.date.today())
             status_item = st.selectbox("Situação:", ["Pendente", "Em Andamento", "Concluído"])
             
-            if st.form_submit_button("Salvar no Sistema"):
+            if st.form_submit_button("Salvar no Calendário"):
                 nova = pd.DataFrame([{"Título": titulo, "Categoria": cat, "Status": status_item, "Prazo": prazo_item}])
                 st.session_state.tarefas = pd.concat([st.session_state.tarefas, nova], ignore_index=True)
-                st.success("Item salvo com sucesso!")
+                st.success("Salvo no calendário com sucesso!")
+                st.rerun()
 
 # --- MÓDULO 2: FINANCEIRO ---
 elif menu == "💳 Financeiro & Gastos":
@@ -172,9 +252,10 @@ elif menu == "💳 Financeiro & Gastos":
                 novo_gasto = pd.DataFrame([{"Item": item_f, "Categoria": cat_f, "Valor": val_f, "Status": stat_f, "Vencimento": venc_f}])
                 st.session_state.gastos = pd.concat([st.session_state.gastos, novo_gasto], ignore_index=True)
                 st.success("Lançamento efetuado!")
+                st.rerun()
 
 # --- MÓDULO 3: METAS ---
-elif menu == "⏳ Metas & Prazos":
+elif menu == "🗓️ Metas & Prazos":
     st.markdown("### 🎯 Acompanhamento de Metas")
     st.dataframe(st.session_state.tarefas[st.session_state.tarefas['Categoria'] == 'Metas'], use_container_width=True)
 
