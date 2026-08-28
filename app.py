@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS fiel ao Juris Control
+# Estilização CSS para recriar o Sidebar Navigation (Dark Theme / Active Pill State)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
@@ -20,33 +20,46 @@ st.markdown("""
         font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
 
-    /* BARRA LATERAL */
+    /* SIDEBAR NAVIGATION - DARK THEME (#0B111E) */
     [data-testid="stSidebar"] {
-        background-color: #0b132b !important;
+        background-color: #0b111e !important;
+        border-right: 1px solid #1e293b;
     }
-    
+
     [data-testid="stSidebar"] *, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
-        color: #8d99ae !important;
+        color: #94a3b8 !important;
         font-weight: 500;
     }
 
-    [data-testid="stSidebar"] label[data-baseweb="radio"] {
-        color: #ffffff !important;
-        padding: 6px 10px;
+    /* ESTILO DAS PÍLULAS DE SELEÇÃO (ACTIVE STATE PILL) */
+    div[class*="stRadio"] > label {
+        background-color: transparent !important;
+        border-radius: 25px !important;
+        padding: 8px 16px !important;
+        margin-bottom: 4px !important;
+        transition: all 0.2s ease-in-out;
     }
 
+    /* ITEM ATIVO (REALCE DE SELEÇÃO) */
+    div[class*="stRadio"] [aria-checked="true"] + div {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+
+    /* ÁREA PRINCIPAL */
     .main {
-        background-color: #f8f9fa;
+        background-color: #f8fafc;
     }
 
     div[data-testid="stMetric"] {
         background-color: #ffffff;
-        border: 1px solid #e9ecef;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
-        padding: 10px 15px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        padding: 12px 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
 
+    /* CALENDÁRIO CORPORATIVO */
     .cal-header {
         text-align: center;
         font-weight: 700;
@@ -60,28 +73,28 @@ st.markdown("""
     .cal-box {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 4px;
+        border-radius: 6px;
         height: 85px;
-        padding: 5px;
+        padding: 6px;
         margin-bottom: 5px;
     }
 
     .cal-box-today {
         background-color: #f0fdf4;
         border: 2px solid #22c55e;
-        border-radius: 4px;
+        border-radius: 6px;
         height: 85px;
-        padding: 5px;
+        padding: 6px;
         margin-bottom: 5px;
     }
 
     .task-tag {
-        background-color: #0b132b;
+        background-color: #0b111e;
         color: #ffffff !important;
-        padding: 2px 4px;
+        padding: 2px 5px;
         border-radius: 3px;
         font-size: 10px;
-        margin-top: 2px;
+        margin-top: 3px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -111,23 +124,23 @@ if 'metas' not in st.session_state:
         {"Meta": "Reserva de Emergência", "Valor Alvo": 10000.0, "Valor Atual": 3500.0, "Prazo": datetime.date(2026, 12, 31)}
     ])
 
-# --- BARRA LATERAL ---
+# --- SIDEBAR NAVIGATION (NAVEGAÇÃO LATERAL VERTICAL) ---
 with st.sidebar:
-    st.markdown("### ⚖️ **Juris Control**")
-    st.caption("Painel Pessoal | v1.0.0")
+    st.markdown("### 🏛️ **Painel Pessoal**")
+    st.caption("v1.0.0 | Acesso Privado")
     st.divider()
     
     menu = st.radio("MÓDULOS", [
-        "Painel de Controle", 
-        "Financeiro & Gastos", 
-        "Metas & Prazos", 
-        "Reserva & Economias",
-        "Histórico & Relatórios"
-    ])
+        "📌 Painel de Controle", 
+        "💳 Financeiro & Gastos", 
+        "⏳ Metas & Prazos", 
+        "🏦 Reserva & Economias",
+        "📜 Histórico & Relatórios"
+    ], label_visibility="collapsed")
     
     st.divider()
-    st.markdown("### 📅 **Seleção de Mês/Ano**")
-    mes_sel = st.selectbox("Mês de Trabalho:", ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"], index=7)
+    st.markdown("##### 📅 **Mês de Referência**")
+    mes_sel = st.selectbox("Mês:", ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"], index=7)
     ano_sel = st.number_input("Ano:", min_value=2024, max_value=2030, value=2026)
     
     chave_mes = f"{ano_sel}-{['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].index(mes_sel)+1:02d}"
@@ -142,7 +155,7 @@ if chave_mes not in st.session_state.historico:
 
 dados_mes = st.session_state.historico[chave_mes]
 
-# LÓGICA DE DEDUÇÃO AUTOMÁTICA DE PARCELAS
+# LÓGICA AUTOMÁTICA DE PARCELAS
 if not dados_mes["gastos"].empty:
     for idx, row in dados_mes["gastos"].iterrows():
         if row["Status"] == "Pago" and row["Total Parcelas"] > 1:
@@ -155,7 +168,7 @@ if not dados_mes["gastos"].empty:
 total_gastos = dados_mes["gastos"][dados_mes["gastos"]["Status"] != "Quitado"]["Valor Total"].sum() if not dados_mes["gastos"].empty else 0.0
 pct_comprometido = (total_gastos / dados_mes["salario"] * 100) if dados_mes["salario"] > 0 else 0.0
 
-# --- TOPBAR ---
+# --- TOPBAR DA PÁGINA ---
 st.markdown("## **Painel de Controle**")
 c_top1, c_top2, c_top3, c_top4 = st.columns(4)
 c_top1.metric(f"Renda ({mes_sel})", f"R$ {dados_mes['salario']:,.2f}")
@@ -165,8 +178,8 @@ c_top4.metric("Saldo Guardado", f"R$ {dados_mes['reserva']:,.2f}")
 
 st.divider()
 
-# --- MÓDULO 1: PAINEL DE CONTROLE ---
-if menu == "Painel de Controle":
+# --- MÓDULO 1: PAINEL DE CONTROLE (AGENDA E CALENDÁRIO) ---
+if "Painel de Controle" in menu:
     col_agenda, col_form = st.columns([2.3, 1])
     
     with col_agenda:
@@ -194,7 +207,7 @@ if menu == "Painel de Controle":
                         for _, t in tarefas_dia.iterrows():
                             html_tags += f"<div class='task-tag'>{t['Título']}</div>"
                     
-                    cor_num = "#0b132b" if dia.month == num_mes else "#cbd5e1"
+                    cor_num = "#0b111e" if dia.month == num_mes else "#cbd5e1"
                     st.markdown(f"""
                         <div class='{box_class}'>
                             <div style='font-weight:bold; font-size:11px; color:{cor_num};'>{dia.day}</div>
@@ -211,7 +224,7 @@ if menu == "Painel de Controle":
             if st.form_submit_button("Salvar na Agenda", use_container_width=True):
                 nova_t = pd.DataFrame([{"Título": tit_t, "Categoria": cat_t, "Status": "Pendente", "Prazo": prazo_t}])
                 dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], nova_t], ignore_index=True)
-                st.success("Salvo com sucesso!")
+                st.success("Salvo!")
                 st.rerun()
 
         st.markdown("---")
@@ -221,8 +234,8 @@ if menu == "Painel de Controle":
                 chk = st.checkbox(f"{row['Título']}", value=(row['Status'] == 'Concluído'), key=f"t_{chave_mes}_{idx}")
                 dados_mes["tarefas"].at[idx, 'Status'] = 'Concluído' if chk else 'Pendente'
 
-# --- MÓDULO 2: FINANCEIRO (AUTOMÁTICO) ---
-elif menu == "Financeiro & Gastos":
+# --- MÓDULO 2: FINANCEIRO & GASTOS ---
+elif "Financeiro" in menu:
     col_f1, col_f2 = st.columns([2, 1])
     
     with col_f1:
@@ -230,7 +243,7 @@ elif menu == "Financeiro & Gastos":
         dados_mes["salario"] = st.number_input("Renda / Salário deste Mês (R$):", value=dados_mes["salario"], step=100.0)
         
         st.markdown("---")
-        st.caption("💡 **Altere o Status para 'Pago' para abater a parcela automaticamente:**")
+        st.caption("💡 **Defina o Status como 'Pago' para decrementar parcelas automaticamente:**")
         df_editado = st.data_editor(
             dados_mes["gastos"], 
             num_rows="dynamic", 
@@ -263,11 +276,11 @@ elif menu == "Financeiro & Gastos":
             if st.form_submit_button("Lançar no Mês", use_container_width=True):
                 novo_g = pd.DataFrame([{"Item": item_f, "Categoria": cat_f, "Valor Total": val_f, "Parcela Atual": parc_a, "Total Parcelas": parc_t, "Status": stat_f}])
                 dados_mes["gastos"] = pd.concat([dados_mes["gastos"], novo_g], ignore_index=True)
-                st.success("Lançamento efetuado!")
+                st.success("Lançado!")
                 st.rerun()
 
 # --- MÓDULO 3: METAS ---
-elif menu == "Metas & Prazos":
+elif "Metas" in menu:
     col_m1, col_m2 = st.columns([2, 1])
     with col_m1:
         st.markdown("### 🎯 **Minhas Metas Globais**")
@@ -291,7 +304,7 @@ elif menu == "Metas & Prazos":
                 st.rerun()
 
 # --- MÓDULO 4: RESERVA & ECONOMIAS ---
-elif menu == "Reserva & Economias":
+elif "Reserva" in menu:
     st.markdown("### 🏦 **Reserva de Emergência e Dinheiro Guardado**")
     val_res = st.number_input(f"Saldo Guardado em {mes_sel}/{ano_sel} (R$):", value=dados_mes["reserva"], step=100.0)
     dados_mes["reserva"] = val_res
@@ -304,7 +317,7 @@ elif menu == "Reserva & Economias":
     st.caption(f"Você já acumulou **{(pct_r * 100):.1f}%** da sua reserva ideal de segurança.")
 
 # --- MÓDULO 5: HISTÓRICO & RELATÓRIOS ---
-elif menu == "Histórico & Relatórios":
+elif "Histórico" in menu:
     st.markdown("### 📜 **Consulta de Histórico e Baixar Relatórios**")
     mes_historico = st.selectbox("Escolha o mês para consultar/baixar:", list(st.session_state.historico.keys()))
     dados_h = st.session_state.historico[mes_historico]
