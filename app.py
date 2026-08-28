@@ -31,7 +31,7 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* ESTILIZAÇÃO DOS BOTÕES DO MENU LATERAL (SEM BOLINHAS) */
+    /* ESTILIZAÇÃO DOS BOTÕES DO MENU LATERAL (ALINHADOS À ESQUERDA) */
     [data-testid="stSidebar"] div.stButton > button {
         background-color: transparent !important;
         color: #94a3b8 !important;
@@ -40,16 +40,24 @@ st.markdown("""
         text-align: left !important;
         display: flex !important;
         justify-content: flex-start !important;
-        padding: 10px 16px !important;
+        align-items: center !important;
+        padding: 10px 12px !important;
         border-radius: 8px !important;
         font-size: 14px !important;
         font-weight: 600 !important;
-        margin-bottom: 2px !important;
+        margin-bottom: 4px !important;
     }
 
     [data-testid="stSidebar"] div.stButton > button:hover {
         background-color: #1e293b !important;
         color: #ffffff !important;
+    }
+
+    [data-testid="stSidebar"] div.stButton > button > div {
+        text-align: left !important;
+        width: 100% !important;
+        display: flex !important;
+        justify-content: flex-start !important;
     }
 
     /* ÁREA PRINCIPAL */
