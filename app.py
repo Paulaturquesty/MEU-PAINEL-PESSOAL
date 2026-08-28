@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS para recriar o Sidebar Navigation (Dark Theme / Active Pill State)
+# CSS Avançado: Esconde botões de rádio e formata o menu como botões verticais nativos
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
@@ -20,7 +20,7 @@ st.markdown("""
         font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
 
-    /* SIDEBAR NAVIGATION - DARK THEME (#0B111E) */
+    /* BARRA LATERAL TEMA ESCURO */
     [data-testid="stSidebar"] {
         background-color: #0b111e !important;
         border-right: 1px solid #1e293b;
@@ -31,19 +31,25 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* ESTILO DAS PÍLULAS DE SELEÇÃO (ACTIVE STATE PILL) */
-    div[class*="stRadio"] > label {
+    /* ESTILIZAÇÃO DOS BOTÕES DO MENU LATERAL (SEM BOLINHAS) */
+    [data-testid="stSidebar"] div.stButton > button {
         background-color: transparent !important;
-        border-radius: 25px !important;
-        padding: 8px 16px !important;
-        margin-bottom: 4px !important;
-        transition: all 0.2s ease-in-out;
+        color: #94a3b8 !important;
+        border: none !important;
+        width: 100% !important;
+        text-align: left !important;
+        display: flex !important;
+        justify-content: flex-start !important;
+        padding: 10px 16px !important;
+        border-radius: 8px !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        margin-bottom: 2px !important;
     }
 
-    /* ITEM ATIVO (REALCE DE SELEÇÃO) */
-    div[class*="stRadio"] [aria-checked="true"] + div {
+    [data-testid="stSidebar"] div.stButton > button:hover {
+        background-color: #1e293b !important;
         color: #ffffff !important;
-        font-weight: 700 !important;
     }
 
     /* ÁREA PRINCIPAL */
@@ -59,7 +65,7 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
 
-    /* CALENDÁRIO CORPORATIVO */
+    /* CALENDÁRIO */
     .cal-header {
         text-align: center;
         font-weight: 700;
@@ -102,6 +108,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# --- NAVEGAÇÃO POR SESSÃO ---
+if 'menu_ativo' not in st.session_state:
+    st.session_state.menu_ativo = "Painel de Controle"
+
 # --- BANCO DE DADOS EM SESSÃO ---
 if 'historico' not in st.session_state:
     st.session_state.historico = {
@@ -124,20 +134,33 @@ if 'metas' not in st.session_state:
         {"Meta": "Reserva de Emergência", "Valor Alvo": 10000.0, "Valor Atual": 3500.0, "Prazo": datetime.date(2026, 12, 31)}
     ])
 
-# --- SIDEBAR NAVIGATION (NAVEGAÇÃO LATERAL VERTICAL) ---
+# --- BARRA LATERAL (MENU LIMPO SEM BOLINHAS) ---
 with st.sidebar:
     st.markdown("### 🏛️ **Painel Pessoal**")
     st.caption("v1.0.0 | Acesso Privado")
     st.divider()
     
-    menu = st.radio("MÓDULOS", [
-        "📌 Painel de Controle", 
-        "💳 Financeiro & Gastos", 
-        "⏳ Metas & Prazos", 
-        "🏦 Reserva & Economias",
-        "📜 Histórico & Relatórios"
-    ], label_visibility="collapsed")
-    
+    # Botões do Menu Lateral
+    if st.button("📌  Painel de Controle", key="btn_painel", use_container_width=True):
+        st.session_state.menu_ativo = "Painel de Controle"
+        st.rerun()
+        
+    if st.button("💳  Financeiro & Gastos", key="btn_fin", use_container_width=True):
+        st.session_state.menu_ativo = "Financeiro & Gastos"
+        st.rerun()
+        
+    if st.button("⏳  Metas & Prazos", key="btn_metas", use_container_width=True):
+        st.session_state.menu_ativo = "Metas & Prazos"
+        st.rerun()
+        
+    if st.button("🏦  Reserva & Economias", key="btn_reserva", use_container_width=True):
+        st.session_state.menu_ativo = "Reserva & Economias"
+        st.rerun()
+        
+    if st.button("📜  Histórico & Relatórios", key="btn_hist", use_container_width=True):
+        st.session_state.menu_ativo = "Histórico & Relatórios"
+        st.rerun()
+
     st.divider()
     st.markdown("##### 📅 **Mês de Referência**")
     mes_sel = st.selectbox("Mês:", ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"], index=7)
@@ -168,7 +191,7 @@ if not dados_mes["gastos"].empty:
 total_gastos = dados_mes["gastos"][dados_mes["gastos"]["Status"] != "Quitado"]["Valor Total"].sum() if not dados_mes["gastos"].empty else 0.0
 pct_comprometido = (total_gastos / dados_mes["salario"] * 100) if dados_mes["salario"] > 0 else 0.0
 
-# --- TOPBAR DA PÁGINA ---
+# --- TOPBAR ---
 st.markdown("## **Painel de Controle**")
 c_top1, c_top2, c_top3, c_top4 = st.columns(4)
 c_top1.metric(f"Renda ({mes_sel})", f"R$ {dados_mes['salario']:,.2f}")
@@ -178,8 +201,8 @@ c_top4.metric("Saldo Guardado", f"R$ {dados_mes['reserva']:,.2f}")
 
 st.divider()
 
-# --- MÓDULO 1: PAINEL DE CONTROLE (AGENDA E CALENDÁRIO) ---
-if "Painel de Controle" in menu:
+# --- MÓDULO 1: PAINEL DE CONTROLE ---
+if st.session_state.menu_ativo == "Painel de Controle":
     col_agenda, col_form = st.columns([2.3, 1])
     
     with col_agenda:
@@ -235,7 +258,7 @@ if "Painel de Controle" in menu:
                 dados_mes["tarefas"].at[idx, 'Status'] = 'Concluído' if chk else 'Pendente'
 
 # --- MÓDULO 2: FINANCEIRO & GASTOS ---
-elif "Financeiro" in menu:
+elif st.session_state.menu_ativo == "Financeiro & Gastos":
     col_f1, col_f2 = st.columns([2, 1])
     
     with col_f1:
@@ -280,7 +303,7 @@ elif "Financeiro" in menu:
                 st.rerun()
 
 # --- MÓDULO 3: METAS ---
-elif "Metas" in menu:
+elif st.session_state.menu_ativo == "Metas & Prazos":
     col_m1, col_m2 = st.columns([2, 1])
     with col_m1:
         st.markdown("### 🎯 **Minhas Metas Globais**")
@@ -304,7 +327,7 @@ elif "Metas" in menu:
                 st.rerun()
 
 # --- MÓDULO 4: RESERVA & ECONOMIAS ---
-elif "Reserva" in menu:
+elif st.session_state.menu_ativo == "Reserva & Economias":
     st.markdown("### 🏦 **Reserva de Emergência e Dinheiro Guardado**")
     val_res = st.number_input(f"Saldo Guardado em {mes_sel}/{ano_sel} (R$):", value=dados_mes["reserva"], step=100.0)
     dados_mes["reserva"] = val_res
@@ -317,7 +340,7 @@ elif "Reserva" in menu:
     st.caption(f"Você já acumulou **{(pct_r * 100):.1f}%** da sua reserva ideal de segurança.")
 
 # --- MÓDULO 5: HISTÓRICO & RELATÓRIOS ---
-elif "Histórico" in menu:
+elif st.session_state.menu_ativo == "Histórico & Relatórios":
     st.markdown("### 📜 **Consulta de Histórico e Baixar Relatórios**")
     mes_historico = st.selectbox("Escolha o mês para consultar/baixar:", list(st.session_state.historico.keys()))
     dados_h = st.session_state.historico[mes_historico]
