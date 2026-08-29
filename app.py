@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- DESIGN SYSTEM & CSS (SAAS FLAT DESIGN 2.0 / PLUS JAKARTA SANS) ---
+# --- DESIGN SYSTEM & CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
@@ -20,7 +20,6 @@ st.markdown("""
         font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
 
-    /* DARK SIDEBAR (#0B111E) */
     [data-testid="stSidebar"] {
         background-color: #0b111e !important;
         border-right: 1px solid #1e293b;
@@ -31,7 +30,6 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* BOTÕES DO MENU LATERAL */
     [data-testid="stSidebar"] div.stButton > button {
         background-color: transparent !important;
         color: #94a3b8 !important;
@@ -62,12 +60,10 @@ st.markdown("""
         gap: 10px !important;
     }
 
-    /* AREA PRINCIPAL */
     .main {
         background-color: #f8fafc;
     }
 
-    /* CARDS KPI / TOPBAR */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -76,7 +72,6 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
 
-    /* CABEÇALHO DO CALENDÁRIO & NAVEGAÇÃO */
     .cal-header-day {
         text-align: center;
         font-weight: 600;
@@ -87,7 +82,6 @@ st.markdown("""
         text-transform: uppercase;
     }
 
-    /* CÉLULAS DOS DIAS DO GRID */
     .cal-cell {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -120,7 +114,6 @@ st.markdown("""
         text-align: center;
     }
 
-    /* MARCADOR CIRCULAR PARA DIA ATUAL/SELECIONADO */
     .cal-date-selected {
         background-color: #0f172a !important;
         color: #ffffff !important;
@@ -128,7 +121,6 @@ st.markdown("""
         font-weight: 600;
     }
 
-    /* EVENT BADGES (PILL CHIPS) */
     .badge-pill {
         display: block;
         padding: 2px 6px;
@@ -148,14 +140,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- GERENCIAMENTO DE ESTADO DE NAVEGAÇÃO ---
+# --- NAVEGAÇÃO & SESSÃO ---
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Painel de Controle"
 
 if 'data_selecionada' not in st.session_state:
     st.session_state.data_selecionada = datetime.date.today()
 
-# --- BANCO DE DADOS EM SESSÃO ---
 if 'historico' not in st.session_state:
     st.session_state.historico = {
         "2026-08": {
@@ -179,7 +170,7 @@ if 'metas' not in st.session_state:
         {"Meta": "Reserva de Emergência", "Valor Alvo": 10000.0, "Valor Atual": 3500.0, "Prazo": datetime.date(2026, 12, 31)}
     ])
 
-# --- BARRA LATERAL (SIDEBAR DARK THEME) ---
+# --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### Painel Pessoal")
     st.caption("v1.0.0 | Acesso Privado")
@@ -251,7 +242,6 @@ st.divider()
 
 # --- MÓDULO 1: PAINEL DE CONTROLE ---
 if st.session_state.menu_ativo == "Painel de Controle":
-    
     col_agenda, col_drawer = st.columns([2.2, 1])
     
     with col_agenda:
@@ -412,53 +402,58 @@ elif st.session_state.menu_ativo == "Reserva & Economias":
     st.progress(min(pct_r, 1.0))
     st.caption(f"Você já acumulou **{(pct_r * 100):.1f}%** da sua reserva ideal de segurança.")
 
-# --- MÓDULO 5: IMPORTAR PLANILHAS (INTEGRAÇÃO IA) ---
+# --- MÓDULO 5: IMPORTAR PLANILHAS (MULTI-UPLOAD ATIVADO) ---
 elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
     st.markdown("### 📥 Importar Planilhas Prontas (Excel / CSV)")
-    st.write("Envie suas planilhas prontas para que o sistema leia as informações e as distribua automaticamente para o Financeiro ou Agenda.")
+    st.write("Selecione um ou múltiplos arquivos para importar de uma só vez:")
     
-    arquivo_enviado = st.file_uploader("Selecione seu arquivo (.xlsx ou .csv):", type=["xlsx", "xls", "csv"])
+    arquivos_enviados = st.file_uploader(
+        "Selecione seus arquivos (.xlsx, .xls, .csv):", 
+        type=["xlsx", "xls", "csv"], 
+        accept_multiple_files=True
+    )
     
-    if arquivo_enviado is not None:
-        try:
-            if arquivo_enviado.name.endswith('.csv'):
-                df_importado = pd.read_csv(arquivo_enviado)
-            else:
-                df_importado = pd.read_excel(arquivo_enviado)
-                
-            st.markdown("#### Pré-visualização do Arquivo:")
-            st.dataframe(df_importado.head(5), use_container_width=True)
+    if arquivos_enviados:
+        tipo_destino = st.radio("Destinar dados importados para:", ["Financeiro & Gastos", "Agenda / Calendário"])
+        
+        if st.button("Processar e Distribuir Todos os Arquivos", icon=":material/auto_awesome:", use_container_width=True):
+            total_linhas = 0
             
-            tipo_destino = st.radio("Destinar dados importados para:", ["Financeiro & Gastos", "Agenda / Calendário"])
+            for arq in arquivos_enviados:
+                try:
+                    if arq.name.endswith('.csv'):
+                        df_imp = pd.read_csv(arq)
+                    else:
+                        df_imp = pd.read_excel(arq)
+                        
+                    if tipo_destino == "Financeiro & Gastos":
+                        df_novo = pd.DataFrame()
+                        df_novo["Item"] = df_imp.iloc[:, 0] if len(df_imp.columns) > 0 else "Gasto Importado"
+                        df_novo["Categoria"] = "Variável"
+                        df_novo["Valor Total"] = pd.to_numeric(df_imp.iloc[:, 1], errors='coerce').fillna(0.0) if len(df_imp.columns) > 1 else 100.0
+                        df_novo["Parcela Atual"] = 1
+                        df_novo["Total Parcelas"] = 1
+                        df_novo["Status"] = "Pendente"
+                        
+                        dados_mes["gastos"] = pd.concat([dados_mes["gastos"], df_novo], ignore_index=True)
+                        total_linhas += len(df_novo)
+                        
+                    else:
+                        df_novo_t = pd.DataFrame()
+                        df_novo_t["Título"] = df_imp.iloc[:, 0] if len(df_imp.columns) > 0 else "Compromisso Importado"
+                        df_novo_t["Categoria"] = "Geral"
+                        df_novo_t["Cor"] = "black"
+                        df_novo_t["Status"] = "Pendente"
+                        df_novo_t["Prazo"] = datetime.date.today()
+                        
+                        dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], df_novo_t], ignore_index=True)
+                        total_linhas += len(df_novo_t)
+                        
+                except Exception as e:
+                    st.error(f"Erro ao ler o arquivo {arq.name}: {e}")
             
-            if st.button("Processar e Distribuir Dados", icon=":material/auto_awesome:", use_container_width=True):
-                if tipo_destino == "Financeiro & Gastos":
-                    # Mapeamento para Financeiro
-                    df_novo = pd.DataFrame()
-                    df_novo["Item"] = df_importado.iloc[:, 0] if len(df_importado.columns) > 0 else "Gasto Importado"
-                    df_novo["Categoria"] = "Variável"
-                    df_novo["Valor Total"] = pd.to_numeric(df_importado.iloc[:, 1], errors='coerce').fillna(0.0) if len(df_importado.columns) > 1 else 100.0
-                    df_novo["Parcela Atual"] = 1
-                    df_novo["Total Parcelas"] = 1
-                    df_novo["Status"] = "Pendente"
-                    
-                    dados_mes["gastos"] = pd.concat([dados_mes["gastos"], df_novo], ignore_index=True)
-                    st.success(f"✅ {len(df_novo)} registros importados com sucesso para a Planilha Financeira de {mes_sel}/{ano_sel}!")
-                    
-                else:
-                    # Mapeamento para Agenda
-                    df_novo_t = pd.DataFrame()
-                    df_novo_t["Título"] = df_importado.iloc[:, 0] if len(df_importado.columns) > 0 else "Compromisso Importado"
-                    df_novo_t["Categoria"] = "Geral"
-                    df_novo_t["Cor"] = "black"
-                    df_novo_t["Status"] = "Pendente"
-                    df_novo_t["Prazo"] = datetime.date.today()
-                    
-                    dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], df_novo_t], ignore_index=True)
-                    st.success(f"✅ {len(df_novo_t)} tarefas importadas para a Agenda de {mes_sel}/{ano_sel}!")
-                    
-        except Exception as e:
-            st.error(f"Erro ao ler arquivo: {e}. Verifique se o formato está correto.")
+            if total_linhas > 0:
+                st.success(f"✅ Sucesso! {total_linhas} registros de {len(arquivos_enviados)} arquivo(s) foram adicionados em {mes_sel}/{ano_sel}.")
 
 # --- MÓDULO 6: HISTÓRICO & RELATÓRIOS ---
 elif st.session_state.menu_ativo == "Histórico & Relatórios":
