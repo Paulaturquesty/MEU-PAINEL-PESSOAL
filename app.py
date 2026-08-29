@@ -77,13 +77,6 @@ st.markdown("""
     }
 
     /* CABEÇALHO DO CALENDÁRIO & NAVEGAÇÃO */
-    .cal-nav-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-    }
-
     .cal-header-day {
         text-align: center;
         font-weight: 600;
@@ -127,7 +120,7 @@ st.markdown("""
         text-align: center;
     }
 
-    /* MARCADOR CIRCULAR PARA DIA ATUAL/SELECIONADO (EX: DIA 28) */
+    /* MARCADOR CIRCULAR PARA DIA ATUAL/SELECIONADO */
     .cal-date-selected {
         background-color: #0f172a !important;
         color: #ffffff !important;
@@ -208,6 +201,10 @@ with st.sidebar:
         st.session_state.menu_ativo = "Reserva & Economias"
         st.rerun()
         
+    if st.button("Importar Planilhas (IA)", icon=":material/upload_file:", key="btn_import", use_container_width=True):
+        st.session_state.menu_ativo = "Importar Planilhas (IA)"
+        st.rerun()
+
     if st.button("Histórico & Relatórios", icon=":material/description:", key="btn_hist", use_container_width=True):
         st.session_state.menu_ativo = "Histórico & Relatórios"
         st.rerun()
@@ -252,14 +249,12 @@ c_top4.metric("Saldo Guardado", f"R$ {dados_mes['reserva']:,.2f}")
 
 st.divider()
 
-# --- MÓDULO 1: PAINEL DE CONTROLE (GRID MENSUAL COMPACTO + DRAWER) ---
+# --- MÓDULO 1: PAINEL DE CONTROLE ---
 if st.session_state.menu_ativo == "Painel de Controle":
     
     col_agenda, col_drawer = st.columns([2.2, 1])
     
-    # CONTROLE CENTRAL: GRID DO CALENDÁRIO
     with col_agenda:
-        # Cabeçalho de Controle e Navegação do Período
         c_nav1, c_nav2, c_nav3 = st.columns([2, 1, 1])
         with c_nav1:
             st.markdown(f"### Agenda - {mes_sel} de {ano_sel}")
@@ -270,7 +265,6 @@ if st.session_state.menu_ativo == "Painel de Controle":
         with c_nav3:
             st.caption(f"Data Ativa: {st.session_state.data_selecionada.strftime('%d/%m/%Y')}")
 
-        # Dias da Semana
         dias_semana = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"]
         cols_h = st.columns(7)
         for i, d in enumerate(dias_semana):
@@ -280,7 +274,6 @@ if st.session_state.menu_ativo == "Painel de Controle":
         cal = calendar.Calendar(firstweekday=6)
         dias_mes = cal.monthdatescalendar(ano_sel, num_mes)
         
-        # Grid Mensal (Linhas x Colunas)
         for semana in dias_mes:
             cols_s = st.columns(7)
             for i, dia in enumerate(semana):
@@ -306,7 +299,6 @@ if st.session_state.menu_ativo == "Painel de Controle":
                         </div>
                     """, unsafe_allow_html=True)
 
-    # DRAWER LATERAL DIREITO (PAINEL DE CRIAÇÃO E STATUS)
     with col_drawer:
         st.markdown("### Tarefa / Compromisso")
         
@@ -420,7 +412,55 @@ elif st.session_state.menu_ativo == "Reserva & Economias":
     st.progress(min(pct_r, 1.0))
     st.caption(f"Você já acumulou **{(pct_r * 100):.1f}%** da sua reserva ideal de segurança.")
 
-# --- MÓDULO 5: HISTÓRICO & RELATÓRIOS ---
+# --- MÓDULO 5: IMPORTAR PLANILHAS (INTEGRAÇÃO IA) ---
+elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
+    st.markdown("### 📥 Importar Planilhas Prontas (Excel / CSV)")
+    st.write("Envie suas planilhas prontas para que o sistema leia as informações e as distribua automaticamente para o Financeiro ou Agenda.")
+    
+    arquivo_enviado = st.file_uploader("Selecione seu arquivo (.xlsx ou .csv):", type=["xlsx", "xls", "csv"])
+    
+    if arquivo_enviado is not None:
+        try:
+            if arquivo_enviado.name.endswith('.csv'):
+                df_importado = pd.read_csv(arquivo_enviado)
+            else:
+                df_importado = pd.read_excel(arquivo_enviado)
+                
+            st.markdown("#### Pré-visualização do Arquivo:")
+            st.dataframe(df_importado.head(5), use_container_width=True)
+            
+            tipo_destino = st.radio("Destinar dados importados para:", ["Financeiro & Gastos", "Agenda / Calendário"])
+            
+            if st.button("Processar e Distribuir Dados", icon=":material/auto_awesome:", use_container_width=True):
+                if tipo_destino == "Financeiro & Gastos":
+                    # Mapeamento para Financeiro
+                    df_novo = pd.DataFrame()
+                    df_novo["Item"] = df_importado.iloc[:, 0] if len(df_importado.columns) > 0 else "Gasto Importado"
+                    df_novo["Categoria"] = "Variável"
+                    df_novo["Valor Total"] = pd.to_numeric(df_importado.iloc[:, 1], errors='coerce').fillna(0.0) if len(df_importado.columns) > 1 else 100.0
+                    df_novo["Parcela Atual"] = 1
+                    df_novo["Total Parcelas"] = 1
+                    df_novo["Status"] = "Pendente"
+                    
+                    dados_mes["gastos"] = pd.concat([dados_mes["gastos"], df_novo], ignore_index=True)
+                    st.success(f"✅ {len(df_novo)} registros importados com sucesso para a Planilha Financeira de {mes_sel}/{ano_sel}!")
+                    
+                else:
+                    # Mapeamento para Agenda
+                    df_novo_t = pd.DataFrame()
+                    df_novo_t["Título"] = df_importado.iloc[:, 0] if len(df_importado.columns) > 0 else "Compromisso Importado"
+                    df_novo_t["Categoria"] = "Geral"
+                    df_novo_t["Cor"] = "black"
+                    df_novo_t["Status"] = "Pendente"
+                    df_novo_t["Prazo"] = datetime.date.today()
+                    
+                    dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], df_novo_t], ignore_index=True)
+                    st.success(f"✅ {len(df_novo_t)} tarefas importadas para a Agenda de {mes_sel}/{ano_sel}!")
+                    
+        except Exception as e:
+            st.error(f"Erro ao ler arquivo: {e}. Verifique se o formato está correto.")
+
+# --- MÓDULO 6: HISTÓRICO & RELATÓRIOS ---
 elif st.session_state.menu_ativo == "Histórico & Relatórios":
     st.markdown("### Consulta de Histórico e Baixar Relatórios")
     mes_historico = st.selectbox("Escolha o mês para consultar/baixar:", list(st.session_state.historico.keys()))
