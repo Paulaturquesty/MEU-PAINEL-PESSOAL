@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS Avançado: Esconde botões de rádio e formata o menu como botões verticais nativos
+# CSS Avançado: Ícones Outlined, Alinhamento à Esquerda e Tema Escuro
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
@@ -31,7 +31,7 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* ESTILIZAÇÃO DOS BOTÕES DO MENU LATERAL (ALINHADOS À ESQUERDA) */
+    /* ESTILIZAÇÃO DOS BOTÕES DO MENU (ALINHADOS À ESQUERDA) */
     [data-testid="stSidebar"] div.stButton > button {
         background-color: transparent !important;
         color: #94a3b8 !important;
@@ -58,6 +58,8 @@ st.markdown("""
         width: 100% !important;
         display: flex !important;
         justify-content: flex-start !important;
+        align-items: center !important;
+        gap: 10px !important;
     }
 
     /* ÁREA PRINCIPAL */
@@ -73,7 +75,7 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
 
-    /* CALENDÁRIO */
+    /* CALENDÁRIO CORPORATIVO */
     .cal-header {
         text-align: center;
         font-weight: 700;
@@ -142,35 +144,35 @@ if 'metas' not in st.session_state:
         {"Meta": "Reserva de Emergência", "Valor Alvo": 10000.0, "Valor Atual": 3500.0, "Prazo": datetime.date(2026, 12, 31)}
     ])
 
-# --- BARRA LATERAL (MENU LIMPO SEM BOLINHAS) ---
+# --- BARRA LATERAL (MENU COM ÍCONES MONOLINEARES OUTLINED) ---
 with st.sidebar:
     st.markdown("### 🏛️ **Painel Pessoal**")
     st.caption("v1.0.0 | Acesso Privado")
     st.divider()
     
-    # Botões do Menu Lateral
-    if st.button("📌  Painel de Controle", key="btn_painel", use_container_width=True):
+    # Botões do Menu com Ícones Line Art Vazados
+    if st.button("Painel de Controle", icon=":material/dashboard:", key="btn_painel", use_container_width=True):
         st.session_state.menu_ativo = "Painel de Controle"
         st.rerun()
         
-    if st.button("💳  Financeiro & Gastos", key="btn_fin", use_container_width=True):
+    if st.button("Financeiro & Gastos", icon=":material/credit_card:", key="btn_fin", use_container_width=True):
         st.session_state.menu_ativo = "Financeiro & Gastos"
         st.rerun()
         
-    if st.button("⏳  Metas & Prazos", key="btn_metas", use_container_width=True):
+    if st.button("Metas & Prazos", icon=":material/hourglass_empty:", key="btn_metas", use_container_width=True):
         st.session_state.menu_ativo = "Metas & Prazos"
         st.rerun()
         
-    if st.button("🏦  Reserva & Economias", key="btn_reserva", use_container_width=True):
+    if st.button("Reserva & Economias", icon=":material/account_balance:", key="btn_reserva", use_container_width=True):
         st.session_state.menu_ativo = "Reserva & Economias"
         st.rerun()
         
-    if st.button("📜  Histórico & Relatórios", key="btn_hist", use_container_width=True):
+    if st.button("Histórico & Relatórios", icon=":material/description:", key="btn_hist", use_container_width=True):
         st.session_state.menu_ativo = "Histórico & Relatórios"
         st.rerun()
 
     st.divider()
-    st.markdown("##### 📅 **Mês de Referência**")
+    st.markdown("##### **Mês de Referência**")
     mes_sel = st.selectbox("Mês:", ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"], index=7)
     ano_sel = st.number_input("Ano:", min_value=2024, max_value=2030, value=2026)
     
@@ -186,7 +188,7 @@ if chave_mes not in st.session_state.historico:
 
 dados_mes = st.session_state.historico[chave_mes]
 
-# LÓGICA AUTOMÁTICA DE PARCELAS
+# LÓGICA AUTOMÁTICA DE DEDUÇÃO DE PARCELAS
 if not dados_mes["gastos"].empty:
     for idx, row in dados_mes["gastos"].iterrows():
         if row["Status"] == "Pago" and row["Total Parcelas"] > 1:
