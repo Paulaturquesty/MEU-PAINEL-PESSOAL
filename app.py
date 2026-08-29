@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- DESIGN SYSTEM & CSS (HYBRID DARK SIDEBAR / LIGHT CONTENT + PILL BADGES) ---
+# --- DESIGN SYSTEM & CSS (HYBRID DARK SIDEBAR / LIGHT CONTENT) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
@@ -41,8 +41,8 @@ st.markdown("""
         display: flex !important;
         justify-content: flex-start !important;
         align-items: center !important;
-        padding: 10px 14px !important;
-        border-radius: 20px !important; /* Pill shape */
+        padding: 10px 12px !important;
+        border-radius: 8px !important;
         font-size: 14px !important;
         font-weight: 600 !important;
         margin-bottom: 4px !important;
@@ -67,7 +67,7 @@ st.markdown("""
         background-color: #f8fafc;
     }
 
-    /* TOPBAR & METRICS CARDS (PILL-SHAPED & BORDER RADIUS) */
+    /* TOPBAR & METRICS CARDS */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -76,13 +76,13 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
 
-    /* MONTH GRID VIEW CALENDAR */
+    /* CALENDÁRIO ESTILO PLANILHA/FOTO */
     .cal-header-day {
         text-align: center;
         font-weight: 700;
         color: #64748b;
         padding: 8px;
-        font-size: 12px;
+        font-size: 11px;
         letter-spacing: 0.5px;
         text-transform: uppercase;
     }
@@ -90,45 +90,38 @@ st.markdown("""
     .cal-cell {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        min-height: 105px;
-        padding: 6px;
-        margin-bottom: 6px;
-        transition: all 0.15s ease-in-out;
-    }
-
-    .cal-cell:hover {
-        border-color: #cbd5e1;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        border-radius: 4px;
+        min-height: 95px;
+        padding: 5px;
+        margin-bottom: 4px;
     }
 
     .cal-date-number {
         font-weight: 600;
-        font-size: 12px;
+        font-size: 11px;
         color: #334155;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
         display: inline-block;
-        width: 22px;
-        height: 22px;
-        line-height: 22px;
+        width: 20px;
+        height: 20px;
+        line-height: 20px;
         text-align: center;
     }
 
-    /* CIRCULAR HIGHLIGHT FOR TODAY (e.g. DAY 28) */
     .cal-date-today {
-        background-color: #2563eb;
+        background-color: #0b111e;
         color: #ffffff !important;
         border-radius: 50%;
     }
 
-    /* EVENT BADGES / PILL CHIPS */
+    /* EVENT BADGES (CHIPS) */
     .badge-pill {
         display: block;
-        padding: 3px 8px;
-        border-radius: 12px;
+        padding: 2px 6px;
+        border-radius: 4px;
         font-size: 10px;
         font-weight: 600;
-        margin-top: 3px;
+        margin-top: 2px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -138,6 +131,14 @@ st.markdown("""
     .badge-black { background-color: #0f172a; }
     .badge-blue { background-color: #2563eb; }
     .badge-green { background-color: #16a34a; }
+
+    /* CARD DE FORMULÁRIO LATERAL */
+    .drawer-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -157,8 +158,8 @@ if 'historico' not in st.session_state:
                 {"Item": "Financiamento TV", "Categoria": "Parcelamento", "Valor Total": 2400.0, "Parcela Atual": 6, "Total Parcelas": 12, "Status": "Pendente"}
             ]),
             "tarefas": pd.DataFrame([
-                {"Título": "CHECAR DESPACHO 2D", "Categoria": "Processo", "Cor": "blue", "Status": "Pendente", "Prazo": datetime.date(2026, 8, 28)},
                 {"Título": "Revisão Geral do Mês", "Categoria": "Geral", "Cor": "black", "Status": "Pendente", "Prazo": datetime.date(2026, 8, 28)},
+                {"Título": "Pagar Fatura Cartão", "Categoria": "Financeiro", "Cor": "blue", "Status": "Pendente", "Prazo": datetime.date(2026, 8, 28)},
                 {"Título": "Comprovação de Pagamento", "Categoria": "Financeiro", "Cor": "green", "Status": "Concluído", "Prazo": datetime.date(2026, 8, 27)}
             ])
         }
@@ -172,10 +173,9 @@ if 'metas' not in st.session_state:
 # --- BARRA LATERAL (SIDEBAR DARK THEME) ---
 with st.sidebar:
     st.markdown("### Painel Pessoal")
-    st.caption("v1.0.0 | System Admin")
+    st.caption("v1.0.0 | Acesso Privado")
     st.divider()
     
-    # Navegação com ícones vazados estilo SaaS
     if st.button("Painel de Controle", icon=":material/dashboard:", key="btn_painel", use_container_width=True):
         st.session_state.menu_ativo = "Painel de Controle"
         st.rerun()
@@ -236,80 +236,76 @@ c_top4.metric("Saldo Guardado", f"R$ {dados_mes['reserva']:,.2f}")
 
 st.divider()
 
-# --- MÓDULO 1: PAINEL DE CONTROLE (MASTER-DETAIL / DRAWER LAYOUT) ---
+# --- MÓDULO 1: PAINEL DE CONTROLE (CALENDÁRIO + FORMULÁRIO LATERAL IGUAL À FOTO) ---
 if st.session_state.menu_ativo == "Painel de Controle":
     
-    # Visão Master (Calendário Full-Width)
-    hoje = datetime.date.today()
-    st.markdown(f"### 📅 Agenda de {mes_sel} / {ano_sel}")
+    col_agenda, col_drawer = st.columns([2.2, 1])
     
-    dias_semana = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"]
-    cols_h = st.columns(7)
-    for i, d in enumerate(dias_semana):
-        cols_h[i].markdown(f"<div class='cal-header-day'>{d}</div>", unsafe_allow_html=True)
+    # LADO ESQUERDO: CALENDÁRIO / AGENDA
+    with col_agenda:
+        hoje = datetime.date.today()
+        st.markdown(f"### Agenda de {mes_sel} / {ano_sel}")
         
-    num_mes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].index(mes_sel) + 1
-    cal = calendar.Calendar(firstweekday=6)
-    dias_mes = cal.monthdatescalendar(ano_sel, num_mes)
-    
-    # Grade do Calendário em Full-Width Master
-    for semana in dias_mes:
-        cols_s = st.columns(7)
-        for i, dia in enumerate(semana):
-            with cols_s[i]:
-                # Destaque circular do dia atual
-                is_today = (dia == hoje)
-                num_class = "cal-date-number cal-date-today" if is_today else "cal-date-number"
-                
-                # Busca tarefas cadastradas no dia
-                tarefas_dia = dados_mes["tarefas"][dados_mes["tarefas"]['Prazo'] == dia] if not dados_mes["tarefas"].empty else pd.DataFrame()
-                
-                html_badges = ""
-                if not tarefas_dia.empty:
-                    for _, t in tarefas_dia.iterrows():
-                        cor_badge = t.get("Cor", "black")
-                        html_badges += f"<div class='badge-pill badge-{cor_badge}'>{t['Título']}</div>"
-                
-                cor_num_inline = "#0f172a" if dia.month == num_mes else "#94a3b8"
-                st.markdown(f"""
-                    <div class='cal-cell'>
-                        <span class='{num_class}' style='color:{cor_num_inline if not is_today else "#fff"};'>{dia.day}</span>
-                        {html_badges}
-                    </div>
-                """, unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # Painel Detail / Drawer Slide-over Expansível na mesma tela
-    with st.expansander if hasattr(st, 'expansander') else st.expander("🛠️ **Gerenciador de Tarefas e Compromissos (Painel Drawer)**", expanded=True):
-        col_d1, col_d2 = st.columns([1.5, 1])
+        dias_semana = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"]
+        cols_h = st.columns(7)
+        for i, d in enumerate(dias_semana):
+            cols_h[i].markdown(f"<div class='cal-header-day'>{d}</div>", unsafe_allow_html=True)
+            
+        num_mes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].index(mes_sel) + 1
+        cal = calendar.Calendar(firstweekday=6)
+        dias_mes = cal.monthdatescalendar(ano_sel, num_mes)
         
-        with col_d1:
-            st.markdown("#### ✅ **Lista & Status das Tarefas do Mês**")
-            if not dados_mes["tarefas"].empty:
-                for idx, row in dados_mes["tarefas"].iterrows():
-                    c_chk, c_txt, c_date = st.columns([0.5, 3, 1.5])
-                    chk = c_chk.checkbox("", value=(row['Status'] == 'Concluído'), key=f"t_draw_{chave_mes}_{idx}")
-                    dados_mes["tarefas"].at[idx, 'Status'] = 'Concluído' if chk else 'Pendente'
-                    c_txt.write(f"**{row['Título']}** ({row['Categoria']})")
-                    c_date.caption(f"Prazo: {row['Prazo'].strftime('%d/%m/%Y')}")
-            else:
-                st.info("Nenhuma tarefa para este mês.")
+        for semana in dias_mes:
+            cols_s = st.columns(7)
+            for i, dia in enumerate(semana):
+                with cols_s[i]:
+                    is_today = (dia == hoje)
+                    num_class = "cal-date-number cal-date-today" if is_today else "cal-date-number"
+                    
+                    tarefas_dia = dados_mes["tarefas"][dados_mes["tarefas"]['Prazo'] == dia] if not dados_mes["tarefas"].empty else pd.DataFrame()
+                    
+                    html_badges = ""
+                    if not tarefas_dia.empty:
+                        for _, t in tarefas_dia.iterrows():
+                            cor_badge = t.get("Cor", "black")
+                            html_badges += f"<div class='badge-pill badge-{cor_badge}'>{t['Título']}</div>"
+                    
+                    cor_num_inline = "#0f172a" if dia.month == num_mes else "#94a3b8"
+                    st.markdown(f"""
+                        <div class='cal-cell'>
+                            <span class='{num_class}' style='color:{cor_num_inline if not is_today else "#fff"};'>{dia.day}</span>
+                            {html_badges}
+                        </div>
+                    """, unsafe_allow_html=True)
 
-        with col_d2:
-            st.markdown("#### ➕ **Adicionar Novo Compromisso**")
-            with st.form("form_drawer_task"):
-                tit_t = st.text_input("Título do Compromisso:")
-                cat_t = st.selectbox("Categoria:", ["Processo", "Financeiro", "Geral", "Prazos"])
-                cor_t = st.selectbox("Cor da Etiqueta (Badge):", ["blue (Azul)", "black (Preto)", "green (Verde)"])
-                prazo_t = st.date_input("Data do Compromisso:", datetime.date.today())
-                
-                if st.form_submit_button("Salvar na Agenda", icon=":material/add_task:", use_container_width=True):
-                    cor_limpa = cor_t.split(" ")[0]
-                    nova_t = pd.DataFrame([{"Título": tit_t, "Categoria": cat_t, "Cor": cor_limpa, "Status": "Pendente", "Prazo": prazo_t}])
-                    dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], nova_t], ignore_index=True)
-                    st.success("Salvo no calendário!")
-                    st.rerun()
+    # LADO DIREITO: FORMULÁRIO DE ADIÇÃO & STATUS (PAINEL DIREITO IGUAL À FOTO)
+    with col_drawer:
+        st.markdown("### Tarefa / Compromisso")
+        
+        with st.form("form_drawer_pessoal"):
+            tit_t = st.text_input("Título:", placeholder="Ex: Pagar conta de luz")
+            cat_t = st.selectbox("Tipo de Vínculo:", ["Geral", "Financeiro", "Trabalho", "Metas / Pessoal"])
+            sit_t = st.selectbox("Situação:", ["Pendente", "Em Andamento", "Concluído"])
+            cor_t = st.selectbox("Cor da Etiqueta:", ["black (Preto)", "blue (Azul)", "green (Verde)"])
+            prazo_t = st.date_input("Data do Prazo:", datetime.date.today())
+            
+            if st.form_submit_button("Salvar", icon=":material/save:", use_container_width=True):
+                cor_limpa = cor_t.split(" ")[0]
+                nova_t = pd.DataFrame([{"Título": tit_t, "Categoria": cat_t, "Cor": cor_limpa, "Status": sit_t, "Prazo": prazo_t}])
+                dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], nova_t], ignore_index=True)
+                st.success("Salvo com sucesso!")
+                st.rerun()
+
+        st.markdown("---")
+        st.markdown("#### Tarefas Cadastradas")
+        if not dados_mes["tarefas"].empty:
+            for idx, row in dados_mes["tarefas"].iterrows():
+                c_chk, c_txt = st.columns([0.2, 0.8])
+                chk = c_chk.checkbox("", value=(row['Status'] == 'Concluído'), key=f"t_draw_p_{chave_mes}_{idx}")
+                dados_mes["tarefas"].at[idx, 'Status'] = 'Concluído' if chk else 'Pendente'
+                c_txt.write(f"**{row['Título']}** ({row['Categoria']})")
+        else:
+            st.caption("Nenhum compromisso cadastrado para este mês.")
 
 # --- MÓDULO 2: FINANCEIRO & GASTOS ---
 elif st.session_state.menu_ativo == "Financeiro & Gastos":
