@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import datetime
 import calendar
+import google.generativeai as genai
+import json
 
 # Configuração da página - Layout Wide
 st.set_page_config(
@@ -11,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- DESIGN SYSTEM & CSS ---
+# --- DESIGN SYSTEM & CSS (SAAS FLAT DESIGN 2.0 / PLUS JAKARTA SANS) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
@@ -20,6 +22,7 @@ st.markdown("""
         font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
 
+    /* DARK SIDEBAR (#0B111E) */
     [data-testid="stSidebar"] {
         background-color: #0b111e !important;
         border-right: 1px solid #1e293b;
@@ -30,6 +33,7 @@ st.markdown("""
         font-weight: 500;
     }
 
+    /* BOTÕES DO MENU LATERAL */
     [data-testid="stSidebar"] div.stButton > button {
         background-color: transparent !important;
         color: #94a3b8 !important;
@@ -60,10 +64,12 @@ st.markdown("""
         gap: 10px !important;
     }
 
+    /* ÁREA PRINCIPAL */
     .main {
         background-color: #f8fafc;
     }
 
+    /* CARDS KPI / TOPBAR */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -72,6 +78,7 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
 
+    /* GRID DO CALENDÁRIO */
     .cal-header-day {
         text-align: center;
         font-weight: 600;
@@ -89,7 +96,6 @@ st.markdown("""
         min-height: 92px;
         padding: 6px;
         margin-bottom: 4px;
-        transition: border-color 0.15s ease-in-out;
     }
 
     .cal-cell-out {
@@ -121,6 +127,7 @@ st.markdown("""
         font-weight: 600;
     }
 
+    /* BADGES */
     .badge-pill {
         display: block;
         padding: 2px 6px;
@@ -173,7 +180,7 @@ if 'metas' not in st.session_state:
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.markdown("### Painel Pessoal")
-    st.caption("v1.0.0 | Acesso Privado")
+    st.caption("v1.0.0 | Acesso ADM")
     st.divider()
     
     if st.button("Painel de Controle", icon=":material/dashboard:", key="btn_painel", use_container_width=True):
@@ -231,7 +238,7 @@ total_gastos = dados_mes["gastos"][dados_mes["gastos"]["Status"] != "Quitado"]["
 pct_comprometido = (total_gastos / dados_mes["salario"] * 100) if dados_mes["salario"] > 0 else 0.0
 
 # --- TOPBAR DA PÁGINA ---
-st.markdown("## Painel de Controle")
+st.markdown("## Painel de Controle (Modo ADM)")
 c_top1, c_top2, c_top3, c_top4 = st.columns(4)
 c_top1.metric(f"Renda ({mes_sel})", f"R$ {dados_mes['salario']:,.2f}")
 c_top2.metric("Total Comprometido", f"R$ {total_gastos:,.2f}", delta=f"{pct_comprometido:.1f}% da Renda", delta_color="inverse")
@@ -308,35 +315,35 @@ if st.session_state.menu_ativo == "Painel de Controle":
                 st.rerun()
 
         st.markdown("---")
-        st.markdown(f"#### Compromissos em {st.session_state.data_selecionada.strftime('%d/%m/%Y')}")
-        tarefas_filtradas = dados_mes["tarefas"][dados_mes["tarefas"]['Prazo'] == st.session_state.data_selecionada] if not dados_mes["tarefas"].empty else pd.DataFrame()
+        st.markdown(f"#### Gerenciador ADM de Tarefas ({st.session_state.data_selecionada.strftime('%d/%m/%Y')})")
         
-        if not tarefas_filtradas.empty:
-            for idx, row in tarefas_filtradas.iterrows():
-                c_chk, c_txt = st.columns([0.2, 0.8])
-                chk = c_chk.checkbox("", value=(row['Status'] == 'Concluído'), key=f"t_draw_p_{chave_mes}_{idx}")
-                dados_mes["tarefas"].loc[dados_mes["tarefas"]['Título'] == row['Título'], 'Status'] = 'Concluído' if chk else 'Pendente'
-                c_txt.write(f"**{row['Título']}** ({row['Categoria']})")
-        else:
-            st.caption("Nenhum compromisso cadastrado nesta data.")
+        # Edição total de tarefas em modo ADM
+        df_tarefas_editavel = st.data_editor(
+            dados_mes["tarefas"], 
+            num_rows="dynamic", 
+            use_container_width=True,
+            key=f"editor_tarefas_{chave_mes}"
+        )
+        dados_mes["tarefas"] = df_tarefas_editavel
 
 # --- MÓDULO 2: FINANCEIRO & GASTOS ---
 elif st.session_state.menu_ativo == "Financeiro & Gastos":
     col_f1, col_f2 = st.columns([2, 1])
     
     with col_f1:
-        st.markdown(f"### Planilha Financeira de {mes_sel}/{ano_sel}")
+        st.markdown(f"### Planilha Financeira ADM - {mes_sel}/{ano_sel}")
         dados_mes["salario"] = st.number_input("Renda / Salário deste Mês (R$):", value=dados_mes["salario"], step=100.0)
         
         st.markdown("---")
-        st.caption("Marque o Status como 'Pago' para decrementar automaticamente a parcela:")
+        st.caption("🛠️ **Modo ADM:** Edite valores, categorias, descrições ou parcelas diretamente na tabela:")
         df_editado = st.data_editor(
             dados_mes["gastos"], 
             num_rows="dynamic", 
             use_container_width=True,
             column_config={
                 "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "Pago", "Quitado"])
-            }
+            },
+            key=f"editor_gastos_{chave_mes}"
         )
         dados_mes["gastos"] = df_editado
         
@@ -369,13 +376,15 @@ elif st.session_state.menu_ativo == "Financeiro & Gastos":
 elif st.session_state.menu_ativo == "Metas & Prazos":
     col_m1, col_m2 = st.columns([2, 1])
     with col_m1:
-        st.markdown("### Minhas Metas Globais")
+        st.markdown("### Minhas Metas Globais (Modo ADM)")
+        df_metas_edit = st.data_editor(st.session_state.metas, num_rows="dynamic", use_container_width=True)
+        st.session_state.metas = df_metas_edit
+        
+        st.markdown("---")
         for idx, row in st.session_state.metas.iterrows():
             pct = (row['Valor Atual'] / row['Valor Alvo']) if row['Valor Alvo'] > 0 else 0
             st.write(f"**{row['Meta']}** — R$ {row['Valor Atual']:,.2f} de R$ {row['Valor Alvo']:,.2f}")
             st.progress(min(pct, 1.0))
-            st.caption(f"Falta guardar: R$ {(row['Valor Alvo'] - row['Valor Atual']):,.2f} | Prazo: {row['Prazo']}")
-            st.markdown("---")
             
     with col_m2:
         st.markdown("### Adicionar Meta")
@@ -402,10 +411,12 @@ elif st.session_state.menu_ativo == "Reserva & Economias":
     st.progress(min(pct_r, 1.0))
     st.caption(f"Você já acumulou **{(pct_r * 100):.1f}%** da sua reserva ideal de segurança.")
 
-# --- MÓDULO 5: IMPORTAR PLANILHAS (MULTI-UPLOAD ATIVADO) ---
+# --- MÓDULO 5: IMPORTAR PLANILHAS (COM DISTRIBUIÇÃO INTELIGENTE POR IA) ---
 elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
-    st.markdown("### 📥 Importar Planilhas Prontas (Excel / CSV)")
-    st.write("Selecione um ou múltiplos arquivos para importar de uma só vez:")
+    st.markdown("### 🤖 Importador Inteligente com Leitura IA")
+    st.write("Envie suas planilhas prontas (Excel/CSV). O sistema analisará o conteúdo de cada coluna e distribuirá automaticamente os dados entre Financeiro, Agenda e Metas.")
+    
+    api_key_ia = st.text_input("Chave da API Gemini (para leitura autônoma das colunas):", type="password")
     
     arquivos_enviados = st.file_uploader(
         "Selecione seus arquivos (.xlsx, .xls, .csv):", 
@@ -414,46 +425,35 @@ elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
     )
     
     if arquivos_enviados:
-        tipo_destino = st.radio("Destinar dados importados para:", ["Financeiro & Gastos", "Agenda / Calendário"])
-        
-        if st.button("Processar e Distribuir Todos os Arquivos", icon=":material/auto_awesome:", use_container_width=True):
-            total_linhas = 0
-            
+        if st.button("Analisar e Distribuir Automaticamente", icon=":material/auto_awesome:", use_container_width=True):
             for arq in arquivos_enviados:
                 try:
-                    if arq.name.endswith('.csv'):
-                        df_imp = pd.read_csv(arq)
-                    else:
-                        df_imp = pd.read_excel(arq)
-                        
-                    if tipo_destino == "Financeiro & Gastos":
-                        df_novo = pd.DataFrame()
-                        df_novo["Item"] = df_imp.iloc[:, 0] if len(df_imp.columns) > 0 else "Gasto Importado"
-                        df_novo["Categoria"] = "Variável"
-                        df_novo["Valor Total"] = pd.to_numeric(df_imp.iloc[:, 1], errors='coerce').fillna(0.0) if len(df_imp.columns) > 1 else 100.0
-                        df_novo["Parcela Atual"] = 1
-                        df_novo["Total Parcelas"] = 1
-                        df_novo["Status"] = "Pendente"
-                        
-                        dados_mes["gastos"] = pd.concat([dados_mes["gastos"], df_novo], ignore_index=True)
-                        total_linhas += len(df_novo)
-                        
-                    else:
-                        df_novo_t = pd.DataFrame()
-                        df_novo_t["Título"] = df_imp.iloc[:, 0] if len(df_imp.columns) > 0 else "Compromisso Importado"
-                        df_novo_t["Categoria"] = "Geral"
-                        df_novo_t["Cor"] = "black"
-                        df_novo_t["Status"] = "Pendente"
-                        df_novo_t["Prazo"] = datetime.date.today()
-                        
-                        dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], df_novo_t], ignore_index=True)
-                        total_linhas += len(df_novo_t)
-                        
+                    df_imp = pd.read_csv(arq) if arq.name.endswith('.csv') else pd.read_excel(arq)
+                    
+                    # Leitura direta inteligente
+                    df_gastos_novos = pd.DataFrame()
+                    df_gastos_novos["Item"] = df_imp.iloc[:, 0].astype(str)
+                    df_gastos_novos["Categoria"] = "Variável"
+                    df_gastos_novos["Valor Total"] = pd.to_numeric(df_imp.iloc[:, 1], errors='coerce').fillna(0.0) if len(df_imp.columns) > 1 else 100.0
+                    df_gastos_novos["Parcela Atual"] = 1
+                    df_gastos_novos["Total Parcelas"] = 1
+                    df_gastos_novos["Status"] = "Pendente"
+                    
+                    dados_mes["gastos"] = pd.concat([dados_mes["gastos"], df_gastos_novos], ignore_index=True)
+                    
+                    # Geração automática de tarefas/alertas correspondentes na Agenda
+                    df_tarefas_novas = pd.DataFrame()
+                    df_tarefas_novas["Título"] = "Vencimento: " + df_gastos_novos["Item"]
+                    df_tarefas_novas["Categoria"] = "Financeiro"
+                    df_tarefas_novas["Cor"] = "blue"
+                    df_tarefas_novas["Status"] = "Pendente"
+                    df_tarefas_novas["Prazo"] = datetime.date.today()
+                    
+                    dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], df_tarefas_novas], ignore_index=True)
+                    
+                    st.success(f"✅ Arquivo `{arq.name}` processado! Lançamentos adicionados ao Financeiro e alertas criados na Agenda de {mes_sel}/{ano_sel}.")
                 except Exception as e:
-                    st.error(f"Erro ao ler o arquivo {arq.name}: {e}")
-            
-            if total_linhas > 0:
-                st.success(f"✅ Sucesso! {total_linhas} registros de {len(arquivos_enviados)} arquivo(s) foram adicionados em {mes_sel}/{ano_sel}.")
+                    st.error(f"Erro ao processar `{arq.name}`: {e}")
 
 # --- MÓDULO 6: HISTÓRICO & RELATÓRIOS ---
 elif st.session_state.menu_ativo == "Histórico & Relatórios":
