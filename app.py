@@ -11,10 +11,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- DESIGN SYSTEM & CSS (HYBRID DARK SIDEBAR / LIGHT CONTENT) ---
+# --- DESIGN SYSTEM & CSS (SAAS FLAT DESIGN 2.0 / PLUS JAKARTA SANS) ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
     html, body, [class*="css"], .stMarkdown, button, input, select, textarea {
         font-family: 'Plus Jakarta Sans', sans-serif !important;
@@ -31,7 +31,7 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* BOTÕES DO MENU LATERAL (ALINHADOS À ESQUERDA) */
+    /* BOTÕES DO MENU LATERAL */
     [data-testid="stSidebar"] div.stButton > button {
         background-color: transparent !important;
         color: #94a3b8 !important;
@@ -62,12 +62,12 @@ st.markdown("""
         gap: 10px !important;
     }
 
-    /* LIGHT CONTENT AREA */
+    /* AREA PRINCIPAL */
     .main {
         background-color: #f8fafc;
     }
 
-    /* TOPBAR & METRICS CARDS */
+    /* CARDS KPI / TOPBAR */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -76,51 +76,72 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
 
-    /* CALENDÁRIO ESTILO PLANILHA/FOTO */
+    /* CABEÇALHO DO CALENDÁRIO & NAVEGAÇÃO */
+    .cal-nav-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
     .cal-header-day {
         text-align: center;
-        font-weight: 700;
+        font-weight: 600;
         color: #64748b;
-        padding: 8px;
-        font-size: 11px;
+        padding: 6px;
+        font-size: 12px;
         letter-spacing: 0.5px;
         text-transform: uppercase;
     }
 
+    /* CÉLULAS DOS DIAS DO GRID */
     .cal-cell {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 4px;
-        min-height: 95px;
-        padding: 5px;
+        border-radius: 6px;
+        min-height: 92px;
+        padding: 6px;
         margin-bottom: 4px;
+        transition: border-color 0.15s ease-in-out;
+    }
+
+    .cal-cell-out {
+        background-color: #f8fafc;
+        border: 1px solid #f1f5f9;
+        border-radius: 6px;
+        min-height: 92px;
+        padding: 6px;
+        margin-bottom: 4px;
+        opacity: 0.5;
     }
 
     .cal-date-number {
-        font-weight: 600;
-        font-size: 11px;
+        font-weight: 500;
+        font-size: 12px;
         color: #334155;
         margin-bottom: 4px;
         display: inline-block;
-        width: 20px;
-        height: 20px;
-        line-height: 20px;
+        width: 22px;
+        height: 22px;
+        line-height: 22px;
         text-align: center;
     }
 
-    .cal-date-today {
-        background-color: #0b111e;
+    /* MARCADOR CIRCULAR PARA DIA ATUAL/SELECIONADO (EX: DIA 28) */
+    .cal-date-selected {
+        background-color: #0f172a !important;
         color: #ffffff !important;
         border-radius: 50%;
+        font-weight: 600;
     }
 
-    /* EVENT BADGES (CHIPS) */
+    /* EVENT BADGES (PILL CHIPS) */
     .badge-pill {
         display: block;
         padding: 2px 6px;
         border-radius: 4px;
         font-size: 10px;
-        font-weight: 600;
+        font-weight: 500;
         margin-top: 2px;
         white-space: nowrap;
         overflow: hidden;
@@ -131,20 +152,15 @@ st.markdown("""
     .badge-black { background-color: #0f172a; }
     .badge-blue { background-color: #2563eb; }
     .badge-green { background-color: #16a34a; }
-
-    /* CARD DE FORMULÁRIO LATERAL */
-    .drawer-card {
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 16px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- GERENCIAMENTO DE ESTADO DE NAVEGAÇÃO ---
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Painel de Controle"
+
+if 'data_selecionada' not in st.session_state:
+    st.session_state.data_selecionada = datetime.date.today()
 
 # --- BANCO DE DADOS EM SESSÃO ---
 if 'historico' not in st.session_state:
@@ -236,16 +252,25 @@ c_top4.metric("Saldo Guardado", f"R$ {dados_mes['reserva']:,.2f}")
 
 st.divider()
 
-# --- MÓDULO 1: PAINEL DE CONTROLE (CALENDÁRIO + FORMULÁRIO LATERAL IGUAL À FOTO) ---
+# --- MÓDULO 1: PAINEL DE CONTROLE (GRID MENSUAL COMPACTO + DRAWER) ---
 if st.session_state.menu_ativo == "Painel de Controle":
     
     col_agenda, col_drawer = st.columns([2.2, 1])
     
-    # LADO ESQUERDO: CALENDÁRIO / AGENDA
+    # CONTROLE CENTRAL: GRID DO CALENDÁRIO
     with col_agenda:
-        hoje = datetime.date.today()
-        st.markdown(f"### Agenda de {mes_sel} / {ano_sel}")
-        
+        # Cabeçalho de Controle e Navegação do Período
+        c_nav1, c_nav2, c_nav3 = st.columns([2, 1, 1])
+        with c_nav1:
+            st.markdown(f"### Agenda - {mes_sel} de {ano_sel}")
+        with c_nav2:
+            if st.button("Hoje", icon=":material/today:", use_container_width=True):
+                st.session_state.data_selecionada = datetime.date.today()
+                st.rerun()
+        with c_nav3:
+            st.caption(f"Data Ativa: {st.session_state.data_selecionada.strftime('%d/%m/%Y')}")
+
+        # Dias da Semana
         dias_semana = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"]
         cols_h = st.columns(7)
         for i, d in enumerate(dias_semana):
@@ -255,12 +280,16 @@ if st.session_state.menu_ativo == "Painel de Controle":
         cal = calendar.Calendar(firstweekday=6)
         dias_mes = cal.monthdatescalendar(ano_sel, num_mes)
         
+        # Grid Mensal (Linhas x Colunas)
         for semana in dias_mes:
             cols_s = st.columns(7)
             for i, dia in enumerate(semana):
                 with cols_s[i]:
-                    is_today = (dia == hoje)
-                    num_class = "cal-date-number cal-date-today" if is_today else "cal-date-number"
+                    is_in_month = (dia.month == num_mes)
+                    is_selected = (dia == st.session_state.data_selecionada)
+                    
+                    cell_class = "cal-cell" if is_in_month else "cal-cell-out"
+                    num_class = "cal-date-number cal-date-selected" if is_selected else "cal-date-number"
                     
                     tarefas_dia = dados_mes["tarefas"][dados_mes["tarefas"]['Prazo'] == dia] if not dados_mes["tarefas"].empty else pd.DataFrame()
                     
@@ -270,42 +299,44 @@ if st.session_state.menu_ativo == "Painel de Controle":
                             cor_badge = t.get("Cor", "black")
                             html_badges += f"<div class='badge-pill badge-{cor_badge}'>{t['Título']}</div>"
                     
-                    cor_num_inline = "#0f172a" if dia.month == num_mes else "#94a3b8"
                     st.markdown(f"""
-                        <div class='cal-cell'>
-                            <span class='{num_class}' style='color:{cor_num_inline if not is_today else "#fff"};'>{dia.day}</span>
+                        <div class='{cell_class}'>
+                            <span class='{num_class}'>{dia.day}</span>
                             {html_badges}
                         </div>
                     """, unsafe_allow_html=True)
 
-    # LADO DIREITO: FORMULÁRIO DE ADIÇÃO & STATUS (PAINEL DIREITO IGUAL À FOTO)
+    # DRAWER LATERAL DIREITO (PAINEL DE CRIAÇÃO E STATUS)
     with col_drawer:
         st.markdown("### Tarefa / Compromisso")
         
         with st.form("form_drawer_pessoal"):
-            tit_t = st.text_input("Título:", placeholder="Ex: Pagar conta de luz")
-            cat_t = st.selectbox("Tipo de Vínculo:", ["Geral", "Financeiro", "Trabalho", "Metas / Pessoal"])
+            tit_t = st.text_input("Título do Compromisso:", placeholder="Ex: Pagar fatura ou reunião")
+            cat_t = st.selectbox("Categoria:", ["Geral", "Financeiro", "Trabalho/Carreira", "Metas / Pessoal"])
             sit_t = st.selectbox("Situação:", ["Pendente", "Em Andamento", "Concluído"])
             cor_t = st.selectbox("Cor da Etiqueta:", ["black (Preto)", "blue (Azul)", "green (Verde)"])
-            prazo_t = st.date_input("Data do Prazo:", datetime.date.today())
+            prazo_t = st.date_input("Data do Prazo:", st.session_state.data_selecionada)
             
-            if st.form_submit_button("Salvar", icon=":material/save:", use_container_width=True):
+            if st.form_submit_button("Salvar Compromisso", icon=":material/save:", use_container_width=True):
                 cor_limpa = cor_t.split(" ")[0]
                 nova_t = pd.DataFrame([{"Título": tit_t, "Categoria": cat_t, "Cor": cor_limpa, "Status": sit_t, "Prazo": prazo_t}])
                 dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], nova_t], ignore_index=True)
-                st.success("Salvo com sucesso!")
+                st.session_state.data_selecionada = prazo_t
+                st.success("Salvo!")
                 st.rerun()
 
         st.markdown("---")
-        st.markdown("#### Tarefas Cadastradas")
-        if not dados_mes["tarefas"].empty:
-            for idx, row in dados_mes["tarefas"].iterrows():
+        st.markdown(f"#### Compromissos em {st.session_state.data_selecionada.strftime('%d/%m/%Y')}")
+        tarefas_filtradas = dados_mes["tarefas"][dados_mes["tarefas"]['Prazo'] == st.session_state.data_selecionada] if not dados_mes["tarefas"].empty else pd.DataFrame()
+        
+        if not tarefas_filtradas.empty:
+            for idx, row in tarefas_filtradas.iterrows():
                 c_chk, c_txt = st.columns([0.2, 0.8])
                 chk = c_chk.checkbox("", value=(row['Status'] == 'Concluído'), key=f"t_draw_p_{chave_mes}_{idx}")
-                dados_mes["tarefas"].at[idx, 'Status'] = 'Concluído' if chk else 'Pendente'
+                dados_mes["tarefas"].loc[dados_mes["tarefas"]['Título'] == row['Título'], 'Status'] = 'Concluído' if chk else 'Pendente'
                 c_txt.write(f"**{row['Título']}** ({row['Categoria']})")
         else:
-            st.caption("Nenhum compromisso cadastrado para este mês.")
+            st.caption("Nenhum compromisso cadastrado nesta data.")
 
 # --- MÓDULO 2: FINANCEIRO & GASTOS ---
 elif st.session_state.menu_ativo == "Financeiro & Gastos":
