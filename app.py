@@ -3,15 +3,15 @@ import pandas as pd
 import datetime
 import calendar
 
-# Configuração da página
+# Configuração da página - Layout Wide
 st.set_page_config(
     page_title="Painel de Controle Pessoal",
-    page_icon=":material/account_balance_wallet:",
+    page_icon=":material/calendar_today:",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# CSS Avançado: Padronização Monolinear, Alinhamento à Esquerda e Tema Escuro
+# --- DESIGN SYSTEM & CSS (HYBRID DARK SIDEBAR / LIGHT CONTENT + PILL BADGES) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
@@ -20,7 +20,7 @@ st.markdown("""
         font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
 
-    /* BARRA LATERAL TEMA ESCURO (#0B111E) */
+    /* DARK SIDEBAR (#0B111E) */
     [data-testid="stSidebar"] {
         background-color: #0b111e !important;
         border-right: 1px solid #1e293b;
@@ -31,7 +31,7 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* ESTILIZAÇÃO DOS BOTÕES DO MENU (ALINHADOS À ESQUERDA + ÍCONES MONOLINEARES) */
+    /* BOTÕES DO MENU LATERAL (ALINHADOS À ESQUERDA) */
     [data-testid="stSidebar"] div.stButton > button {
         background-color: transparent !important;
         color: #94a3b8 !important;
@@ -41,8 +41,8 @@ st.markdown("""
         display: flex !important;
         justify-content: flex-start !important;
         align-items: center !important;
-        padding: 10px 12px !important;
-        border-radius: 8px !important;
+        padding: 10px 14px !important;
+        border-radius: 20px !important; /* Pill shape */
         font-size: 14px !important;
         font-weight: 600 !important;
         margin-bottom: 4px !important;
@@ -62,63 +62,86 @@ st.markdown("""
         gap: 10px !important;
     }
 
-    /* ÁREA PRINCIPAL */
+    /* LIGHT CONTENT AREA */
     .main {
         background-color: #f8fafc;
     }
 
+    /* TOPBAR & METRICS CARDS (PILL-SHAPED & BORDER RADIUS) */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 12px 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        border-radius: 12px;
+        padding: 12px 18px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
 
-    /* CALENDÁRIO CORPORATIVO */
-    .cal-header {
+    /* MONTH GRID VIEW CALENDAR */
+    .cal-header-day {
         text-align: center;
         font-weight: 700;
-        background-color: #f1f5f9;
-        color: #1e293b;
+        color: #64748b;
         padding: 8px;
-        border-radius: 4px;
-        font-size: 11px;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
     }
 
-    .cal-box {
+    .cal-cell {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        height: 85px;
+        border-radius: 8px;
+        min-height: 105px;
         padding: 6px;
-        margin-bottom: 5px;
+        margin-bottom: 6px;
+        transition: all 0.15s ease-in-out;
     }
 
-    .cal-box-today {
-        background-color: #f0fdf4;
-        border: 2px solid #22c55e;
-        border-radius: 6px;
-        height: 85px;
-        padding: 6px;
-        margin-bottom: 5px;
+    .cal-cell:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
     }
 
-    .task-tag {
-        background-color: #0b111e;
+    .cal-date-number {
+        font-weight: 600;
+        font-size: 12px;
+        color: #334155;
+        margin-bottom: 6px;
+        display: inline-block;
+        width: 22px;
+        height: 22px;
+        line-height: 22px;
+        text-align: center;
+    }
+
+    /* CIRCULAR HIGHLIGHT FOR TODAY (e.g. DAY 28) */
+    .cal-date-today {
+        background-color: #2563eb;
         color: #ffffff !important;
-        padding: 2px 5px;
-        border-radius: 3px;
+        border-radius: 50%;
+    }
+
+    /* EVENT BADGES / PILL CHIPS */
+    .badge-pill {
+        display: block;
+        padding: 3px 8px;
+        border-radius: 12px;
         font-size: 10px;
+        font-weight: 600;
         margin-top: 3px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        color: #ffffff !important;
     }
+
+    .badge-black { background-color: #0f172a; }
+    .badge-blue { background-color: #2563eb; }
+    .badge-green { background-color: #16a34a; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- NAVEGAÇÃO POR SESSÃO ---
+# --- GERENCIAMENTO DE ESTADO DE NAVEGAÇÃO ---
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Painel de Controle"
 
@@ -134,7 +157,9 @@ if 'historico' not in st.session_state:
                 {"Item": "Financiamento TV", "Categoria": "Parcelamento", "Valor Total": 2400.0, "Parcela Atual": 6, "Total Parcelas": 12, "Status": "Pendente"}
             ]),
             "tarefas": pd.DataFrame([
-                {"Título": "Pagar Fatura Cartão", "Categoria": "Financeiro", "Status": "Pendente", "Prazo": datetime.date(2026, 8, 28)}
+                {"Título": "CHECAR DESPACHO 2D", "Categoria": "Processo", "Cor": "blue", "Status": "Pendente", "Prazo": datetime.date(2026, 8, 28)},
+                {"Título": "Revisão Geral do Mês", "Categoria": "Geral", "Cor": "black", "Status": "Pendente", "Prazo": datetime.date(2026, 8, 28)},
+                {"Título": "Comprovação de Pagamento", "Categoria": "Financeiro", "Cor": "green", "Status": "Concluído", "Prazo": datetime.date(2026, 8, 27)}
             ])
         }
     }
@@ -144,13 +169,13 @@ if 'metas' not in st.session_state:
         {"Meta": "Reserva de Emergência", "Valor Alvo": 10000.0, "Valor Atual": 3500.0, "Prazo": datetime.date(2026, 12, 31)}
     ])
 
-# --- BARRA LATERAL (PADRÃO 100% OUTLINED/LINE ART) ---
+# --- BARRA LATERAL (SIDEBAR DARK THEME) ---
 with st.sidebar:
     st.markdown("### Painel Pessoal")
-    st.caption("v1.0.0 | Acesso Privado")
+    st.caption("v1.0.0 | System Admin")
     st.divider()
     
-    # Botões do Menu Lateral com Ícones Monolineares
+    # Navegação com ícones vazados estilo SaaS
     if st.button("Painel de Controle", icon=":material/dashboard:", key="btn_painel", use_container_width=True):
         st.session_state.menu_ativo = "Painel de Controle"
         st.rerun()
@@ -183,12 +208,12 @@ if chave_mes not in st.session_state.historico:
         "salario": 5000.0,
         "reserva": 0.0,
         "gastos": pd.DataFrame(columns=["Item", "Categoria", "Valor Total", "Parcela Atual", "Total Parcelas", "Status"]),
-        "tarefas": pd.DataFrame(columns=["Título", "Categoria", "Status", "Prazo"])
+        "tarefas": pd.DataFrame(columns=["Título", "Categoria", "Cor", "Status", "Prazo"])
     }
 
 dados_mes = st.session_state.historico[chave_mes]
 
-# LÓGICA AUTOMÁTICA DE DEDUÇÃO DE PARCELAS
+# LÓGICA AUTOMÁTICA DE PARCELAMENTO
 if not dados_mes["gastos"].empty:
     for idx, row in dados_mes["gastos"].iterrows():
         if row["Status"] == "Pago" and row["Total Parcelas"] > 1:
@@ -211,61 +236,80 @@ c_top4.metric("Saldo Guardado", f"R$ {dados_mes['reserva']:,.2f}")
 
 st.divider()
 
-# --- MÓDULO 1: PAINEL DE CONTROLE ---
+# --- MÓDULO 1: PAINEL DE CONTROLE (MASTER-DETAIL / DRAWER LAYOUT) ---
 if st.session_state.menu_ativo == "Painel de Controle":
-    col_agenda, col_form = st.columns([2.3, 1])
     
-    with col_agenda:
-        hoje = datetime.date.today()
-        st.markdown(f"### Agenda de {mes_sel} / {ano_sel}")
+    # Visão Master (Calendário Full-Width)
+    hoje = datetime.date.today()
+    st.markdown(f"### 📅 Agenda de {mes_sel} / {ano_sel}")
+    
+    dias_semana = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"]
+    cols_h = st.columns(7)
+    for i, d in enumerate(dias_semana):
+        cols_h[i].markdown(f"<div class='cal-header-day'>{d}</div>", unsafe_allow_html=True)
         
-        dias_semana = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"]
-        cols_h = st.columns(7)
-        for i, d in enumerate(dias_semana):
-            cols_h[i].markdown(f"<div class='cal-header'>{d}</div>", unsafe_allow_html=True)
-            
-        num_mes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].index(mes_sel) + 1
-        cal = calendar.Calendar(firstweekday=6)
-        dias_mes = cal.monthdatescalendar(ano_sel, num_mes)
+    num_mes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].index(mes_sel) + 1
+    cal = calendar.Calendar(firstweekday=6)
+    dias_mes = cal.monthdatescalendar(ano_sel, num_mes)
+    
+    # Grade do Calendário em Full-Width Master
+    for semana in dias_mes:
+        cols_s = st.columns(7)
+        for i, dia in enumerate(semana):
+            with cols_s[i]:
+                # Destaque circular do dia atual
+                is_today = (dia == hoje)
+                num_class = "cal-date-number cal-date-today" if is_today else "cal-date-number"
+                
+                # Busca tarefas cadastradas no dia
+                tarefas_dia = dados_mes["tarefas"][dados_mes["tarefas"]['Prazo'] == dia] if not dados_mes["tarefas"].empty else pd.DataFrame()
+                
+                html_badges = ""
+                if not tarefas_dia.empty:
+                    for _, t in tarefas_dia.iterrows():
+                        cor_badge = t.get("Cor", "black")
+                        html_badges += f"<div class='badge-pill badge-{cor_badge}'>{t['Título']}</div>"
+                
+                cor_num_inline = "#0f172a" if dia.month == num_mes else "#94a3b8"
+                st.markdown(f"""
+                    <div class='cal-cell'>
+                        <span class='{num_class}' style='color:{cor_num_inline if not is_today else "#fff"};'>{dia.day}</span>
+                        {html_badges}
+                    </div>
+                """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Painel Detail / Drawer Slide-over Expansível na mesma tela
+    with st.expansander if hasattr(st, 'expansander') else st.expander("🛠️ **Gerenciador de Tarefas e Compromissos (Painel Drawer)**", expanded=True):
+        col_d1, col_d2 = st.columns([1.5, 1])
         
-        for semana in dias_mes:
-            cols_s = st.columns(7)
-            for i, dia in enumerate(semana):
-                with cols_s[i]:
-                    box_class = "cal-box-today" if dia == hoje else "cal-box"
-                    tarefas_dia = dados_mes["tarefas"][dados_mes["tarefas"]['Prazo'] == dia] if not dados_mes["tarefas"].empty else pd.DataFrame()
-                    
-                    html_tags = ""
-                    if not tarefas_dia.empty:
-                        for _, t in tarefas_dia.iterrows():
-                            html_tags += f"<div class='task-tag'>{t['Título']}</div>"
-                    
-                    cor_num = "#0b111e" if dia.month == num_mes else "#cbd5e1"
-                    st.markdown(f"""
-                        <div class='{box_class}'>
-                            <div style='font-weight:bold; font-size:11px; color:{cor_num};'>{dia.day}</div>
-                            {html_tags}
-                        </div>
-                    """, unsafe_allow_html=True)
+        with col_d1:
+            st.markdown("#### ✅ **Lista & Status das Tarefas do Mês**")
+            if not dados_mes["tarefas"].empty:
+                for idx, row in dados_mes["tarefas"].iterrows():
+                    c_chk, c_txt, c_date = st.columns([0.5, 3, 1.5])
+                    chk = c_chk.checkbox("", value=(row['Status'] == 'Concluído'), key=f"t_draw_{chave_mes}_{idx}")
+                    dados_mes["tarefas"].at[idx, 'Status'] = 'Concluído' if chk else 'Pendente'
+                    c_txt.write(f"**{row['Título']}** ({row['Categoria']})")
+                    c_date.caption(f"Prazo: {row['Prazo'].strftime('%d/%m/%Y')}")
+            else:
+                st.info("Nenhuma tarefa para este mês.")
 
-    with col_form:
-        st.markdown("### Nova Tarefa / Prazo")
-        with st.form("form_tarefa"):
-            tit_t = st.text_input("Título:")
-            cat_t = st.selectbox("Categoria:", ["Geral", "Financeiro", "Trabalho", "Metas"])
-            prazo_t = st.date_input("Data:", datetime.date.today())
-            if st.form_submit_button("Salvar na Agenda", icon=":material/add_task:", use_container_width=True):
-                nova_t = pd.DataFrame([{"Título": tit_t, "Categoria": cat_t, "Status": "Pendente", "Prazo": prazo_t}])
-                dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], nova_t], ignore_index=True)
-                st.success("Salvo!")
-                st.rerun()
-
-        st.markdown("---")
-        st.markdown("### Status das Tarefas")
-        if not dados_mes["tarefas"].empty:
-            for idx, row in dados_mes["tarefas"].iterrows():
-                chk = st.checkbox(f"{row['Título']}", value=(row['Status'] == 'Concluído'), key=f"t_{chave_mes}_{idx}")
-                dados_mes["tarefas"].at[idx, 'Status'] = 'Concluído' if chk else 'Pendente'
+        with col_d2:
+            st.markdown("#### ➕ **Adicionar Novo Compromisso**")
+            with st.form("form_drawer_task"):
+                tit_t = st.text_input("Título do Compromisso:")
+                cat_t = st.selectbox("Categoria:", ["Processo", "Financeiro", "Geral", "Prazos"])
+                cor_t = st.selectbox("Cor da Etiqueta (Badge):", ["blue (Azul)", "black (Preto)", "green (Verde)"])
+                prazo_t = st.date_input("Data do Compromisso:", datetime.date.today())
+                
+                if st.form_submit_button("Salvar na Agenda", icon=":material/add_task:", use_container_width=True):
+                    cor_limpa = cor_t.split(" ")[0]
+                    nova_t = pd.DataFrame([{"Título": tit_t, "Categoria": cat_t, "Cor": cor_limpa, "Status": "Pendente", "Prazo": prazo_t}])
+                    dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], nova_t], ignore_index=True)
+                    st.success("Salvo no calendário!")
+                    st.rerun()
 
 # --- MÓDULO 2: FINANCEIRO & GASTOS ---
 elif st.session_state.menu_ativo == "Financeiro & Gastos":
@@ -276,7 +320,7 @@ elif st.session_state.menu_ativo == "Financeiro & Gastos":
         dados_mes["salario"] = st.number_input("Renda / Salário deste Mês (R$):", value=dados_mes["salario"], step=100.0)
         
         st.markdown("---")
-        st.caption("Defina o Status como 'Pago' para decrementar parcelas automaticamente:")
+        st.caption("Marque o Status como 'Pago' para decrementar automaticamente a parcela:")
         df_editado = st.data_editor(
             dados_mes["gastos"], 
             num_rows="dynamic", 
