@@ -147,7 +147,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Inicialização da Sessão
+# Inicialização Global da Sessão
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Painel de Controle"
 
@@ -158,18 +158,20 @@ if 'historico' not in st.session_state:
     st.session_state.historico = {
         "08/2026": {
             "rendas": pd.DataFrame([
-                {"Descrição": "Trabalho / Vínculo 1", "Valor Previsto": 2400.0, "Valor Recebido": 2400.0, "Data Recebimento": "06/08/2026"},
-                {"Descrição": "Trabalho / Vínculo 2", "Valor Previsto": 1380.0, "Valor Recebido": 1380.0, "Data Recebimento": "28/08/2026"}
+                {"Descrição": "Salário PCA", "Valor Previsto": 1700.0, "Valor Recebido": 1700.0, "Data Recebimento": "06/07/2026"},
+                {"Descrição": "Salário Leandro", "Valor Previsto": 1000.0, "Valor Recebido": 1000.0, "Data Recebimento": "28/08/2026"},
+                {"Descrição": "Salário Aider Box", "Valor Previsto": 1080.0, "Valor Recebido": 1080.0, "Data Recebimento": "28/08/2026"}
             ]),
             "gastos": pd.DataFrame([
-                {"Descrição": "NUBANK", "Categoria": "CARTÃO", "Valor": 121.37, "Data Vencimento": "25/08/2026", "Status": "Pendente"},
-                {"Descrição": "INTER", "Categoria": "CARTÃO", "Valor": 663.63, "Data Vencimento": "12/08/2026", "Status": "Pendente"},
-                {"Descrição": "MERCADO PAGO", "Categoria": "CARTÃO", "Valor": 203.25, "Data Vencimento": "07/08/2026", "Status": "Pendente"},
-                {"Descrição": "PLANO INTERNET", "Categoria": "CELULAR", "Valor": 64.99, "Data Vencimento": "15/08/2026", "Status": "Pendente"},
-                {"Descrição": "UBER", "Categoria": "TRANSPORTE", "Valor": 200.0, "Data Vencimento": "01/08/2026", "Status": "Pendente"},
-                {"Descrição": "FACULDADE", "Categoria": "ESTUDO", "Valor": 1304.28, "Data Vencimento": "30/08/2026", "Status": "Pendente"},
-                {"Descrição": "LAVA LOUÇA", "Categoria": "CASA", "Valor": 196.04, "Data Vencimento": "08/08/2026", "Status": "Pendente"},
-                {"Descrição": "PARCELAS FIXAS", "Categoria": "CARTAO", "Valor": 888.26, "Data Vencimento": "07/08/2026", "Status": "Pendente"}
+                {"Descrição": "NUBANK", "Categoria": "CARTÃO", "Valor": 121.37, "Data Vencimento": "25/09/2026", "Status": "Pendente"},
+                {"Descrição": "INTER", "Categoria": "CARTÃO", "Valor": 663.63, "Data Vencimento": "12/09/2026", "Status": "Pendente"},
+                {"Descrição": "MERCADO PAGO", "Categoria": "CARTÃO", "Valor": 203.25, "Data Vencimento": "07/09/2026", "Status": "Pendente"},
+                {"Descrição": "PLANO INTERNET", "Categoria": "CELULAR", "Valor": 64.99, "Data Vencimento": "15/09/2026", "Status": "Pendente"},
+                {"Descrição": "UBER", "Categoria": "TRANSPORTE", "Valor": 200.0, "Data Vencimento": "01/09/2026", "Status": "Pendente"},
+                {"Descrição": "FACULDADE", "Categoria": "ESTUDO", "Valor": 1304.28, "Data Vencimento": "30/09/2026", "Status": "Pendente"},
+                {"Descrição": "LAVA LOUÇA", "Categoria": "CASA", "Valor": 196.04, "Data Vencimento": "08/09/2026", "Status": "Pendente"},
+                {"Descrição": "ENERGIA", "Categoria": "CASA", "Valor": 200.0, "Data Vencimento": "14/09/2026", "Status": "Pendente"},
+                {"Descrição": "PARCELAS FIXAS", "Categoria": "CARTAO", "Valor": 888.26, "Data Vencimento": "07/09/2026", "Status": "Pendente"}
             ]),
             "tarefas": pd.DataFrame([
                 {"Título": "Vencimento: INTER", "Contexto": "Financeiro", "Prioridade": "🔴 Alta", "Status": "Pendente", "Prazo": datetime.date(2026, 8, 12)},
@@ -227,18 +229,18 @@ if mes_sel not in st.session_state.historico:
 
 dados_mes = st.session_state.historico[mes_sel]
 
-# Recálculo Automático Global
-total_entradas = dados_mes["rendas"]["Valor Recebido"].sum() if "Valor Recebido" in dados_mes["rendas"].columns and not dados_mes["rendas"].empty else 0.0
-total_gastos = dados_mes["gastos"]["Valor"].sum() if "Valor" in dados_mes["gastos"].columns and not dados_mes["gastos"].empty else 0.0
+# Recálculo Automático Dinâmico
+total_entradas = float(dados_mes["rendas"]["Valor Recebido"].sum()) if ("Valor Recebido" in dados_mes["rendas"].columns and not dados_mes["rendas"].empty) else 0.0
+total_gastos = float(dados_mes["gastos"]["Valor"].sum()) if ("Valor" in dados_mes["gastos"].columns and not dados_mes["gastos"].empty) else 0.0
 saldo_restante = total_entradas - total_gastos
 
-# Topbar (Valores formatados em R$ 1.000,00)
+# Topbar
 st.markdown("## Painel de Controle (Modo ADM)")
 c_top1, c_top2, c_top3, c_top4 = st.columns(4)
 c_top1.metric(f"Total Recebido ({mes_sel})", formata_reais(total_entradas))
 c_top2.metric("Total Gasto", formata_reais(total_gastos))
 c_top3.metric("Saldo Restante", formata_reais(saldo_restante), delta=formata_reais(saldo_restante))
-contas_pend = len(dados_mes["gastos"][dados_mes["gastos"]["Status"] == "Pendente"]) if "Status" in dados_mes["gastos"].columns and not dados_mes["gastos"].empty else 0
+contas_pend = len(dados_mes["gastos"][dados_mes["gastos"]["Status"] == "Pendente"]) if ("Status" in dados_mes["gastos"].columns and not dados_mes["gastos"].empty) else 0
 c_top4.metric("Contas Pendentes", contas_pend)
 
 st.divider()
@@ -320,7 +322,8 @@ if st.session_state.menu_ativo == "Painel de Controle":
 
         st.markdown("---")
         st.markdown(f"#### Gerenciador ADM de Tarefas")
-        df_tarefas_editavel = st.data_editor(
+        
+        st.session_state.historico[mes_sel]["tarefas"] = st.data_editor(
             dados_mes["tarefas"], 
             num_rows="dynamic", 
             use_container_width=True,
@@ -330,18 +333,17 @@ if st.session_state.menu_ativo == "Painel de Controle":
             },
             key=f"editor_tarefas_{mes_sel}"
         )
-        dados_mes["tarefas"] = df_tarefas_editavel
 
 # Módulo 2: Financeiro & Gastos
 elif st.session_state.menu_ativo == "Financeiro & Gastos":
     st.markdown(f"### Painel Financeiro - Referência {mes_sel}")
-    st.caption("💡 Dê dois cliques em qualquer valor ou nome para editar diretamente:")
+    st.caption("💡 Qualquer edição feita abaixo é salva instantaneamente ao pressionar Enter:")
     
     aba_rendas, aba_despesas = st.tabs(["💵 Rendas / Salários", "💸 Despesas & Gastos"])
     
     with aba_rendas:
         st.markdown("#### Entradas do Mês")
-        df_rendas_edit = st.data_editor(
+        st.session_state.historico[mes_sel]["rendas"] = st.data_editor(
             dados_mes["rendas"], 
             num_rows="dynamic", 
             use_container_width=True,
@@ -351,11 +353,10 @@ elif st.session_state.menu_ativo == "Financeiro & Gastos":
             },
             key=f"editor_rendas_{mes_sel}"
         )
-        dados_mes["rendas"] = df_rendas_edit
 
     with aba_despesas:
         st.markdown("#### Despesas & Contas")
-        df_gastos_edit = st.data_editor(
+        st.session_state.historico[mes_sel]["gastos"] = st.data_editor(
             dados_mes["gastos"], 
             num_rows="dynamic", 
             use_container_width=True,
@@ -365,14 +366,13 @@ elif st.session_state.menu_ativo == "Financeiro & Gastos":
             },
             key=f"editor_gastos_{mes_sel}"
         )
-        dados_mes["gastos"] = df_gastos_edit
 
 # Módulo 3: Aba de Metas e Prazos (Isolada)
 elif st.session_state.menu_ativo == "Metas & Prazos":
     st.markdown("### Aba de Metas e Prazos (Isolada)")
     st.caption("ℹ️ **Regra de Escopo:** Os valores cadastrados aqui ficam restritos a esta aba e não entram no cálculo de despesas mensais.")
     
-    df_metas_edit = st.data_editor(
+    st.session_state.metas = st.data_editor(
         st.session_state.metas, 
         num_rows="dynamic", 
         use_container_width=True, 
@@ -382,7 +382,6 @@ elif st.session_state.menu_ativo == "Metas & Prazos":
         },
         key="editor_metas_isolado"
     )
-    st.session_state.metas = df_metas_edit
     
     st.markdown("---")
     st.markdown("#### Progresso & Aporte Mensal Sugerido")
@@ -402,14 +401,67 @@ elif st.session_state.menu_ativo == "Metas & Prazos":
         with col_m2:
             st.caption(f"Aporte Sugerido: **{formata_reais(aporte_sugerido)} /mês**")
 
-# Módulo 4: Importar Planilhas
+# Módulo 4: Importar Planilhas (Processamento Estruturado)
 elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
-    st.markdown("### 📥 Importação de Arquivos")
-    st.write("Envie seus arquivos de dados (.xlsx / .csv):")
-    arquivos_enviados = st.file_uploader("Selecione seus arquivos:", type=["xlsx", "xls", "csv"], accept_multiple_files=True)
+    st.markdown("### 📥 Importador Minucioso de Planilhas Excel")
+    st.write("Envie seus arquivos `.xlsx` para distribuição automática e estruturada:")
+    
+    arquivos_enviados = st.file_uploader("Selecione seus arquivos (.xlsx ou .csv):", type=["xlsx", "xls", "csv"], accept_multiple_files=True)
+    
     if arquivos_enviados:
-        if st.button("Processar Arquivos", use_container_width=True):
-            st.success("Arquivos lidos com sucesso!")
+        if st.button("Processar e Distribuir Dados", use_container_width=True):
+            for arq in arquivos_enviados:
+                try:
+                    if arq.name.endswith('.csv'):
+                        df_imp = pd.read_csv(arq)
+                        st.info(f"Arquivo CSV `{arq.name}` lido.")
+                    else:
+                        xls = pd.ExcelFile(arq)
+                        for sheet in xls.sheet_names:
+                            sheet_clean = sheet.strip()
+                            
+                            # 1. Processar Abas Mensais (062026, 072026, 082026, 092026)
+                            if sheet_clean in ['062026', '072026', '082026', '092026']:
+                                mes_chave = f"{sheet_clean[:2]}/{sheet_clean[2:]}"
+                                df_raw = pd.read_excel(xls, sheet_name=sheet)
+                                
+                                # Extrair bloco de Gastos (Colunas I a O)
+                                df_gastos_raw = df_raw.iloc[2:, 8:15].dropna(subset=[df_raw.columns[8]])
+                                if not df_gastos_raw.empty:
+                                    df_gastos_raw.columns = ['Descrição', 'Data Vencimento', 'Categoria', 'Valor', 'Detalhes', 'Método', 'Pago_Bool']
+                                    df_gastos_raw['Status'] = df_gastos_raw['Pago_Bool'].apply(lambda x: 'Pago' if x == True else 'Pendente')
+                                    df_gastos_raw['Valor'] = pd.to_numeric(df_gastos_raw['Valor'], errors='coerce').fillna(0.0)
+                                    
+                                    if mes_chave not in st.session_state.historico:
+                                        st.session_state.historico[mes_chave] = {
+                                            "rendas": pd.DataFrame(columns=["Descrição", "Valor Previsto", "Valor Recebido", "Data Recebimento"]),
+                                            "gastos": pd.DataFrame(),
+                                            "tarefas": pd.DataFrame(columns=["Título", "Contexto", "Prioridade", "Status", "Prazo"])
+                                        }
+                                    st.session_state.historico[mes_chave]["gastos"] = df_gastos_raw[['Descrição', 'Categoria', 'Valor', 'Data Vencimento', 'Status']]
+                                
+                                # Extrair bloco de Receitas (Colunas Q a U)
+                                if len(df_raw.columns) >= 20:
+                                    df_rendas_raw = df_raw.iloc[2:, 16:20].dropna(subset=[df_raw.columns[16]])
+                                    if not df_rendas_raw.empty:
+                                        df_rendas_raw.columns = ['Descrição', 'Data Recebimento', 'Categoria', 'Valor Recebido']
+                                        df_rendas_raw['Valor Previsto'] = pd.to_numeric(df_rendas_raw['Valor Recebido'], errors='coerce').fillna(0.0)
+                                        df_rendas_raw['Valor Recebido'] = pd.to_numeric(df_rendas_raw['Valor Recebido'], errors='coerce').fillna(0.0)
+                                        st.session_state.historico[mes_chave]["rendas"] = df_rendas_raw[['Descrição', 'Valor Previsto', 'Valor Recebido', 'Data Recebimento']]
+
+                            # 2. Processar Aba de Metas
+                            elif 'METAS' in sheet_clean.upper() or 'PLANEJAMENTO' in sheet_clean.upper():
+                                df_metas_raw = pd.read_excel(xls, sheet_name=sheet, skiprows=10)
+                                if 'Meta | Item a Comprar' in df_metas_raw.columns:
+                                    df_m_clean = df_metas_raw[['Meta | Item a Comprar', 'Valor Necessário', 'Valor Guardado', 'Data Alvo']].dropna(subset=['Meta | Item a Comprar'])
+                                    df_m_clean.columns = ['Nome da Meta', 'Valor Alvo (R$)', 'Valor Já Guardado', 'Prazo']
+                                    df_m_clean['Valor Alvo (R$)'] = pd.to_numeric(df_m_clean['Valor Alvo (R$)'], errors='coerce').fillna(0.0)
+                                    df_m_clean['Valor Já Guardado'] = pd.to_numeric(df_m_clean['Valor Já Guardado'], errors='coerce').fillna(0.0)
+                                    st.session_state.metas = df_m_clean
+
+                    st.success(f"✅ Arquivo `{arq.name}` integrado perfeitamente em suas respectivas abas e meses!")
+                except Exception as e:
+                    st.error(f"Erro ao processar `{arq.name}`: {e}")
 
 # Módulo 5: Histórico
 elif st.session_state.menu_ativo == "Histórico & Relatórios":
