@@ -11,6 +11,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# FUNÇÃO AUXILIAR PARA FORMATAR MOEDA NO PADRÃO BRASILEIRO (R$ 1.000,00)
+def formata_reais(valor):
+    try:
+        val = float(valor)
+        return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except (ValueError, TypeError):
+        return "R$ 0,00"
+
 # Estilização CSS (Design System Hybrid Dark/Light)
 st.markdown("""
 <style>
@@ -224,12 +232,12 @@ total_entradas = dados_mes["rendas"]["Valor Recebido"].sum() if "Valor Recebido"
 total_gastos = dados_mes["gastos"]["Valor"].sum() if "Valor" in dados_mes["gastos"].columns and not dados_mes["gastos"].empty else 0.0
 saldo_restante = total_entradas - total_gastos
 
-# Topbar
+# Topbar (Valores formatados em R$ 1.000,00)
 st.markdown("## Painel de Controle (Modo ADM)")
 c_top1, c_top2, c_top3, c_top4 = st.columns(4)
-c_top1.metric(f"Total Recebido ({mes_sel})", f"R$ {total_entradas:,.2f}")
-c_top2.metric("Total Gasto", f"R$ {total_gastos:,.2f}")
-c_top3.metric("Saldo Restante", f"R$ {saldo_restante:,.2f}", delta=f"{saldo_restante:,.2f}")
+c_top1.metric(f"Total Recebido ({mes_sel})", formata_reais(total_entradas))
+c_top2.metric("Total Gasto", formata_reais(total_gastos))
+c_top3.metric("Saldo Restante", formata_reais(saldo_restante), delta=formata_reais(saldo_restante))
 contas_pend = len(dados_mes["gastos"][dados_mes["gastos"]["Status"] == "Pendente"]) if "Status" in dados_mes["gastos"].columns and not dados_mes["gastos"].empty else 0
 c_top4.metric("Contas Pendentes", contas_pend)
 
@@ -311,9 +319,7 @@ if st.session_state.menu_ativo == "Painel de Controle":
                 st.rerun()
 
         st.markdown("---")
-        st.markdown(f"#### Gerenciador ADM de Tarefas (Edição Direta)")
-        st.caption("💡 Dê dois cliques em qualquer célula da tabela para editar o texto ou valor sem precisar excluir:")
-        
+        st.markdown(f"#### Gerenciador ADM de Tarefas")
         df_tarefas_editavel = st.data_editor(
             dados_mes["tarefas"], 
             num_rows="dynamic", 
@@ -329,27 +335,32 @@ if st.session_state.menu_ativo == "Painel de Controle":
 # Módulo 2: Financeiro & Gastos
 elif st.session_state.menu_ativo == "Financeiro & Gastos":
     st.markdown(f"### Painel Financeiro - Referência {mes_sel}")
-    st.caption("💡 Dê dois cliques em qualquer valor ou nome abaixo para editar diretamente na planilha:")
+    st.caption("💡 Dê dois cliques em qualquer valor ou nome para editar diretamente:")
     
     aba_rendas, aba_despesas = st.tabs(["💵 Rendas / Salários", "💸 Despesas & Gastos"])
     
     with aba_rendas:
-        st.markdown("#### Entradas do Mês (Edição Célula a Célula)")
+        st.markdown("#### Entradas do Mês")
         df_rendas_edit = st.data_editor(
             dados_mes["rendas"], 
             num_rows="dynamic", 
             use_container_width=True,
+            column_config={
+                "Valor Previsto": st.column_config.NumberColumn("Valor Previsto", format="R$ %.2f"),
+                "Valor Recebido": st.column_config.NumberColumn("Valor Recebido", format="R$ %.2f")
+            },
             key=f"editor_rendas_{mes_sel}"
         )
         dados_mes["rendas"] = df_rendas_edit
 
     with aba_despesas:
-        st.markdown("#### Despesas & Contas (Edição Célula a Célula)")
+        st.markdown("#### Despesas & Contas")
         df_gastos_edit = st.data_editor(
             dados_mes["gastos"], 
             num_rows="dynamic", 
             use_container_width=True,
             column_config={
+                "Valor": st.column_config.NumberColumn("Valor", format="R$ %.2f"),
                 "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "Pago"])
             },
             key=f"editor_gastos_{mes_sel}"
@@ -359,12 +370,16 @@ elif st.session_state.menu_ativo == "Financeiro & Gastos":
 # Módulo 3: Aba de Metas e Prazos (Isolada)
 elif st.session_state.menu_ativo == "Metas & Prazos":
     st.markdown("### Aba de Metas e Prazos (Isolada)")
-    st.caption("ℹ️ Dê dois cliques no nome ou valor para alterar suas metas a qualquer momento:")
+    st.caption("ℹ️ **Regra de Escopo:** Os valores cadastrados aqui ficam restritos a esta aba e não entram no cálculo de despesas mensais.")
     
     df_metas_edit = st.data_editor(
         st.session_state.metas, 
         num_rows="dynamic", 
         use_container_width=True, 
+        column_config={
+            "Valor Alvo (R$)": st.column_config.NumberColumn("Valor Alvo (R$)", format="R$ %.2f"),
+            "Valor Já Guardado": st.column_config.NumberColumn("Valor Já Guardado", format="R$ %.2f")
+        },
         key="editor_metas_isolado"
     )
     st.session_state.metas = df_metas_edit
@@ -382,10 +397,10 @@ elif st.session_state.menu_ativo == "Metas & Prazos":
         
         col_m1, col_m2 = st.columns([3, 1])
         with col_m1:
-            st.write(f"**{row['Nome da Meta']}** — Guardado: R$ {val_guardado:,.2f} de R$ {val_alvo:,.2f} | Prazo: {row['Prazo']}")
+            st.write(f"**{row['Nome da Meta']}** — Guardado: {formata_reais(val_guardado)} de {formata_reais(val_alvo)} | Prazo: {row['Prazo']}")
             st.progress(pct)
         with col_m2:
-            st.caption(f"Aporte Sugerido: **R$ {aporte_sugerido:,.2f} /mês**")
+            st.caption(f"Aporte Sugerido: **{formata_reais(aporte_sugerido)} /mês**")
 
 # Módulo 4: Importar Planilhas
 elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
