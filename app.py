@@ -220,8 +220,8 @@ if mes_sel not in st.session_state.historico:
 dados_mes = st.session_state.historico[mes_sel]
 
 # Recálculo Automático Global
-total_entradas = dados_mes["rendas"]["Valor Recebido"].sum() if not dados_mes["rendas"].empty else 0.0
-total_gastos = dados_mes["gastos"]["Valor"].sum() if not dados_mes["gastos"].empty else 0.0
+total_entradas = dados_mes["rendas"]["Valor Recebido"].sum() if "Valor Recebido" in dados_mes["rendas"].columns and not dados_mes["rendas"].empty else 0.0
+total_gastos = dados_mes["gastos"]["Valor"].sum() if "Valor" in dados_mes["gastos"].columns and not dados_mes["gastos"].empty else 0.0
 saldo_restante = total_entradas - total_gastos
 
 # Topbar
@@ -230,7 +230,8 @@ c_top1, c_top2, c_top3, c_top4 = st.columns(4)
 c_top1.metric(f"Total Recebido ({mes_sel})", f"R$ {total_entradas:,.2f}")
 c_top2.metric("Total Gasto", f"R$ {total_gastos:,.2f}")
 c_top3.metric("Saldo Restante", f"R$ {saldo_restante:,.2f}", delta=f"{saldo_restante:,.2f}")
-c_top4.metric("Contas Pendentes", len(dados_mes["gastos"][dados_mes["gastos"]["Status"] == "Pendente"]) if not dados_mes["gastos"].empty else 0)
+contas_pend = len(dados_mes["gastos"][dados_mes["gastos"]["Status"] == "Pendente"]) if "Status" in dados_mes["gastos"].columns and not dados_mes["gastos"].empty else 0
+c_top4.metric("Contas Pendentes", contas_pend)
 
 st.divider()
 
@@ -268,7 +269,10 @@ if st.session_state.menu_ativo == "Painel de Controle":
                     cell_class = "cal-cell" if is_in_month else "cal-cell-out"
                     num_class = "cal-date-number cal-date-selected" if is_selected else "cal-date-number"
                     
-                    tarefas_dia = dados_mes["tarefas"][dados_mes["tarefas"]['Prazo'] == dia] if not dados_mes["tarefas"].empty else pd.DataFrame()
+                    tarefas_dia = pd.DataFrame()
+                    if "tarefas" in dados_mes and not dados_mes["tarefas"].empty:
+                        if "Prazo" in dados_mes["tarefas"].columns:
+                            tarefas_dia = dados_mes["tarefas"][dados_mes["tarefas"]['Prazo'] == dia]
                     
                     html_badges = ""
                     if not tarefas_dia.empty:
@@ -307,7 +311,9 @@ if st.session_state.menu_ativo == "Painel de Controle":
                 st.rerun()
 
         st.markdown("---")
-        st.markdown(f"#### Gerenciador ADM de Tarefas")
+        st.markdown(f"#### Gerenciador ADM de Tarefas (Edição Direta)")
+        st.caption("💡 Dê dois cliques em qualquer célula da tabela para editar o texto ou valor sem precisar excluir:")
+        
         df_tarefas_editavel = st.data_editor(
             dados_mes["tarefas"], 
             num_rows="dynamic", 
@@ -323,11 +329,12 @@ if st.session_state.menu_ativo == "Painel de Controle":
 # Módulo 2: Financeiro & Gastos
 elif st.session_state.menu_ativo == "Financeiro & Gastos":
     st.markdown(f"### Painel Financeiro - Referência {mes_sel}")
+    st.caption("💡 Dê dois cliques em qualquer valor ou nome abaixo para editar diretamente na planilha:")
     
     aba_rendas, aba_despesas = st.tabs(["💵 Rendas / Salários", "💸 Despesas & Gastos"])
     
     with aba_rendas:
-        st.markdown("#### Entradas do Mês (Múltiplos Vínculos / Freelas)")
+        st.markdown("#### Entradas do Mês (Edição Célula a Célula)")
         df_rendas_edit = st.data_editor(
             dados_mes["rendas"], 
             num_rows="dynamic", 
@@ -337,7 +344,7 @@ elif st.session_state.menu_ativo == "Financeiro & Gastos":
         dados_mes["rendas"] = df_rendas_edit
 
     with aba_despesas:
-        st.markdown("#### Planilha de Despesas & Contas")
+        st.markdown("#### Despesas & Contas (Edição Célula a Célula)")
         df_gastos_edit = st.data_editor(
             dados_mes["gastos"], 
             num_rows="dynamic", 
@@ -352,7 +359,7 @@ elif st.session_state.menu_ativo == "Financeiro & Gastos":
 # Módulo 3: Aba de Metas e Prazos (Isolada)
 elif st.session_state.menu_ativo == "Metas & Prazos":
     st.markdown("### Aba de Metas e Prazos (Isolada)")
-    st.caption("ℹ️ **Regra de Escopo:** Os valores cadastrados aqui ficam restritos a esta aba e não entram no cálculo de despesas mensais.")
+    st.caption("ℹ️ Dê dois cliques no nome ou valor para alterar suas metas a qualquer momento:")
     
     df_metas_edit = st.data_editor(
         st.session_state.metas, 
@@ -371,7 +378,6 @@ elif st.session_state.menu_ativo == "Metas & Prazos":
         falta = max(val_alvo - val_guardado, 0.0)
         pct = min((val_guardado / val_alvo) if val_alvo > 0 else 0.0, 1.0)
         
-        # Aporte mensal sugerido (estimado em 6 meses padrão)
         aporte_sugerido = falta / 6.0
         
         col_m1, col_m2 = st.columns([3, 1])
