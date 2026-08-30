@@ -13,7 +13,118 @@ st.set_page_config(
 # CSS Estilizado
 st.markdown("""
 <style>
- 
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+    html, body, [class*="css"], .stMarkdown, button, input, select, textarea {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    [data-testid="stSidebar"] {
+        background-color: #0b111e !important;
+        border-right: 1px solid #1e293b;
+    }
+
+    [data-testid="stSidebar"] *, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span {
+        color: #94a3b8 !important;
+        font-weight: 500;
+    }
+
+    [data-testid="stSidebar"] div.stButton > button {
+        background-color: transparent !important;
+        color: #94a3b8 !important;
+        border: none !important;
+        width: 100% !important;
+        text-align: left !important;
+        display: flex !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        padding: 10px 12px !important;
+        border-radius: 8px !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        margin-bottom: 4px !important;
+    }
+
+    [data-testid="stSidebar"] div.stButton > button:hover {
+        background-color: #1e293b !important;
+        color: #ffffff !important;
+    }
+
+    .main {
+        background-color: #f8fafc;
+    }
+
+    div[data-testid="stMetric"] {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 12px 18px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .cal-header-day {
+        text-align: center;
+        font-weight: 600;
+        color: #64748b;
+        padding: 6px;
+        font-size: 12px;
+        text-transform: uppercase;
+    }
+
+    .cal-cell {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        min-height: 92px;
+        padding: 6px;
+        margin-bottom: 4px;
+    }
+
+    .cal-cell-out {
+        background-color: #f8fafc;
+        border: 1px solid #f1f5f9;
+        border-radius: 6px;
+        min-height: 92px;
+        padding: 6px;
+        margin-bottom: 4px;
+        opacity: 0.5;
+    }
+
+    .cal-date-number {
+        font-weight: 500;
+        font-size: 12px;
+        color: #334155;
+        margin-bottom: 4px;
+        display: inline-block;
+        width: 22px;
+        height: 22px;
+        line-height: 22px;
+        text-align: center;
+    }
+
+    .cal-date-selected {
+        background-color: #0f172a !important;
+        color: #ffffff !important;
+        border-radius: 50%;
+        font-weight: 600;
+    }
+
+    .badge-pill {
+        display: block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 500;
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #ffffff !important;
+    }
+
+    .badge-black { background-color: #0f172a; }
+    .badge-blue { background-color: #2563eb; }
+    .badge-green { background-color: #16a34a; }
 </style>
 """, unsafe_allow_html=True)
 
