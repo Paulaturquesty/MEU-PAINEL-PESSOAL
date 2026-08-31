@@ -190,6 +190,11 @@ if 'metas' not in st.session_state:
         {"Nome da Meta": "JEEP RENEGADE LIMITED", "Valor Alvo (R$)": 28000.0, "Valor Já Guardado": 0.0, "Prazo": "28/10/2027"}
     ])
 
+if 'historico_aportes' not in st.session_state:
+    st.session_state.historico_aportes = pd.DataFrame([
+        {"Nome da Meta": "DENTISTA (DR. GUSTAVO)", "Mês / Referência": "07/2026", "Valor Aportado (R$)": 600.0, "Data do Lançamento": "01/07/2026"}
+    ])
+
 # Menu Lateral
 with st.sidebar:
     st.markdown("### Painel Pessoal")
@@ -229,7 +234,6 @@ if mes_sel not in st.session_state.historico:
 
 dados_mes = st.session_state.historico[mes_sel]
 
-# Garantir existência da chave "tarefas" para evitar KeyError
 if "tarefas" not in dados_mes:
     dados_mes["tarefas"] = pd.DataFrame(columns=["Título", "Contexto", "Prioridade", "Status", "Prazo"])
 
@@ -373,7 +377,7 @@ elif st.session_state.menu_ativo == "Financeiro & Gastos":
             key=f"editor_gastos_{mes_sel}"
         )
 
-# Módulo 3: Aba de Metas e Prazos (Isolada)
+# Módulo 3: Aba de Metas e Prazos (Isolada com Histórico de Aportes)
 elif st.session_state.menu_ativo == "Metas & Prazos":
     st.markdown("### Aba de Metas e Prazos (Isolada)")
     st.caption("ℹ️ **Regra de Escopo:** Os valores cadastrados aqui ficam restritos a esta aba e não entram no cálculo de despesas mensais.")
@@ -393,8 +397,8 @@ elif st.session_state.menu_ativo == "Metas & Prazos":
     st.markdown("#### Progresso & Aporte Mensal Sugerido")
     
     for idx, row in st.session_state.metas.iterrows():
-        val_alvo = row.get("Valor Alvo (R$)", 1.0)
-        val_guardado = row.get("Valor Já Guardado", 0.0)
+        val_alvo = float(row.get("Valor Alvo (R$)", 1.0))
+        val_guardado = float(row.get("Valor Já Guardado", 0.0))
         falta = max(val_alvo - val_guardado, 0.0)
         pct = min((val_guardado / val_alvo) if val_alvo > 0 else 0.0, 1.0)
         
@@ -407,7 +411,52 @@ elif st.session_state.menu_ativo == "Metas & Prazos":
         with col_m2:
             st.caption(f"Aporte Sugerido: **{formata_reais(aporte_sugerido)} /mês**")
 
-# Módulo 4: Importar Planilhas (Processamento Estruturado)
+    st.markdown("---")
+    st.markdown("### 💰 Histórico de Economia / Aportes Mensais por Meta")
+    st.caption("Registre aqui quanto você conseguiu guardar em cada mês para cada meta específica:")
+    
+    col_ap1, col_ap2 = st.columns([1, 2])
+    
+    with col_ap1:
+        st.markdown("##### ➕ Lançar Novo Aporte")
+        with st.form("form_novo_aporte"):
+            meta_escolhida = st.selectbox("Escolha a Meta:", st.session_state.metas["Nome da Meta"].unique())
+            mes_ref_aporte = st.selectbox("Mês de Referência:", ["06/2026", "07/2026", "08/2026", "09/2026", "10/2026", "11/2026", "12/2026"], index=2)
+            valor_aportado = st.number_input("Quanto guardou neste mês (R$):", min_value=0.0, step=50.0)
+            data_reg = st.date_input("Data do Registro:", datetime.date.today())
+            
+            if st.form_submit_button("Salvar Aporte do Mês", use_container_width=True):
+                # Registra o histórico
+                novo_ap = pd.DataFrame([{
+                    "Nome da Meta": meta_escolhida,
+                    "Mês / Referência": mes_ref_aporte,
+                    "Valor Aportado (R$)": valor_aportado,
+                    "Data do Lançamento": data_reg.strftime("%d/%m/%Y")
+                }])
+                st.session_state.historico_aportes = pd.concat([st.session_state.historico_aportes, novo_ap], ignore_index=True)
+                
+                # Atualiza automaticamente o acumulado "Valor Já Guardado" na tabela de Metas
+                idx_meta = st.session_state.metas[st.session_state.metas["Nome da Meta"] == meta_escolhida].index
+                if not idx_meta.empty:
+                    val_antigo = float(st.session_state.metas.loc[idx_meta[0], "Valor Já Guardado"])
+                    st.session_state.metas.loc[idx_meta[0], "Valor Já Guardado"] = val_antigo + valor_aportado
+                
+                st.success(f"Aporte de {formata_reais(valor_aportado)} adicionado à meta '{meta_escolhida}'!")
+                st.rerun()
+
+    with col_ap2:
+        st.markdown("##### 📜 Extrato de Aportes Realizados no Tempo")
+        st.session_state.historico_aportes = st.data_editor(
+            st.session_state.historico_aportes,
+            num_rows="dynamic",
+            use_container_width=True,
+            column_config={
+                "Valor Aportado (R$)": st.column_config.NumberColumn("Valor Aportado (R$)", format="R$ %.2f")
+            },
+            key="editor_historico_aportes"
+        )
+
+# Módulo 4: Importar Planilhas
 elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
     st.markdown("### 📥 Importador Minucioso de Planilhas Excel")
     st.write("Envie seus arquivos `.xlsx` para distribuição automática e estruturada:")
@@ -426,12 +475,10 @@ elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
                         for sheet in xls.sheet_names:
                             sheet_clean = sheet.strip()
                             
-                            # 1. Processar Abas Mensais (062026, 072026, 082026, 092026)
                             if sheet_clean in ['062026', '072026', '082026', '092026']:
                                 mes_chave = f"{sheet_clean[:2]}/{sheet_clean[2:]}"
                                 df_raw = pd.read_excel(xls, sheet_name=sheet)
                                 
-                                # Extrair bloco de Gastos (Colunas I a O)
                                 df_gastos_raw = df_raw.iloc[2:, 8:15].dropna(subset=[df_raw.columns[8]])
                                 if not df_gastos_raw.empty:
                                     df_gastos_raw.columns = ['Descrição', 'Data Vencimento', 'Categoria', 'Valor', 'Detalhes', 'Método', 'Pago_Bool']
@@ -446,7 +493,6 @@ elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
                                         }
                                     st.session_state.historico[mes_chave]["gastos"] = df_gastos_raw[['Descrição', 'Categoria', 'Valor', 'Data Vencimento', 'Status']]
                                 
-                                # Extrair bloco de Receitas (Colunas Q a U)
                                 if len(df_raw.columns) >= 20:
                                     df_rendas_raw = df_raw.iloc[2:, 16:20].dropna(subset=[df_raw.columns[16]])
                                     if not df_rendas_raw.empty:
@@ -455,7 +501,6 @@ elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
                                         df_rendas_raw['Valor Recebido'] = pd.to_numeric(df_rendas_raw['Valor Recebido'], errors='coerce').fillna(0.0)
                                         st.session_state.historico[mes_chave]["rendas"] = df_rendas_raw[['Descrição', 'Valor Previsto', 'Valor Recebido', 'Data Recebimento']]
 
-                            # 2. Processar Aba de Metas
                             elif 'METAS' in sheet_clean.upper() or 'PLANEJAMENTO' in sheet_clean.upper():
                                 df_metas_raw = pd.read_excel(xls, sheet_name=sheet, skiprows=10)
                                 if 'Meta | Item a Comprar' in df_metas_raw.columns:
@@ -465,7 +510,7 @@ elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
                                     df_m_clean['Valor Já Guardado'] = pd.to_numeric(df_m_clean['Valor Já Guardado'], errors='coerce').fillna(0.0)
                                     st.session_state.metas = df_m_clean
 
-                    st.success(f"✅ Arquivo `{arq.name}` integrado perfeitamente em suas respectivas abas e meses!")
+                    st.success(f"✅ Arquivo `{arq.name}` integrado perfeitamente!")
                 except Exception as e:
                     st.error(f"Erro ao processar `{arq.name}`: {e}")
 
