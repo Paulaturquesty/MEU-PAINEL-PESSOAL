@@ -229,6 +229,10 @@ if mes_sel not in st.session_state.historico:
 
 dados_mes = st.session_state.historico[mes_sel]
 
+# Garantir existência da chave "tarefas" para evitar KeyError
+if "tarefas" not in dados_mes:
+    dados_mes["tarefas"] = pd.DataFrame(columns=["Título", "Contexto", "Prioridade", "Status", "Prazo"])
+
 # Recálculo Automático Dinâmico
 total_entradas = float(dados_mes["rendas"]["Valor Recebido"].sum()) if ("Valor Recebido" in dados_mes["rendas"].columns and not dados_mes["rendas"].empty) else 0.0
 total_gastos = float(dados_mes["gastos"]["Valor"].sum()) if ("Valor" in dados_mes["gastos"].columns and not dados_mes["gastos"].empty) else 0.0
@@ -279,10 +283,10 @@ if st.session_state.menu_ativo == "Painel de Controle":
                     cell_class = "cal-cell" if is_in_month else "cal-cell-out"
                     num_class = "cal-date-number cal-date-selected" if is_selected else "cal-date-number"
                     
+                    tarefas_df = dados_mes.get("tarefas", pd.DataFrame())
                     tarefas_dia = pd.DataFrame()
-                    if "tarefas" in dados_mes and not dados_mes["tarefas"].empty:
-                        if "Prazo" in dados_mes["tarefas"].columns:
-                            tarefas_dia = dados_mes["tarefas"][dados_mes["tarefas"]['Prazo'] == dia]
+                    if not tarefas_df.empty and "Prazo" in tarefas_df.columns:
+                        tarefas_dia = tarefas_df[tarefas_df['Prazo'] == dia]
                     
                     html_badges = ""
                     if not tarefas_dia.empty:
@@ -315,7 +319,7 @@ if st.session_state.menu_ativo == "Painel de Controle":
                     "Status": "A Fazer", 
                     "Prazo": prazo_t
                 }])
-                dados_mes["tarefas"] = pd.concat([dados_mes["tarefas"], nova_t], ignore_index=True)
+                dados_mes["tarefas"] = pd.concat([dados_mes.get("tarefas", pd.DataFrame()), nova_t], ignore_index=True)
                 st.session_state.data_selecionada = prazo_t
                 st.success("Salvo!")
                 st.rerun()
@@ -323,8 +327,10 @@ if st.session_state.menu_ativo == "Painel de Controle":
         st.markdown("---")
         st.markdown(f"#### Gerenciador ADM de Tarefas")
         
+        tarefas_para_editar = dados_mes.get("tarefas", pd.DataFrame(columns=["Título", "Contexto", "Prioridade", "Status", "Prazo"]))
+        
         st.session_state.historico[mes_sel]["tarefas"] = st.data_editor(
-            dados_mes["tarefas"], 
+            tarefas_para_editar, 
             num_rows="dynamic", 
             use_container_width=True,
             column_config={
