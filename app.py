@@ -323,7 +323,7 @@ if st.session_state.menu_ativo == "Painel de Controle":
                     "Status": "A Fazer", 
                     "Prazo": prazo_t
                 }])
-                dados_mes["tarefas"] = pd.concat([dados_mes.get("tarefas", pd.DataFrame()), nova_t], ignore_index=True)
+                st.session_state.historico[mes_sel]["tarefas"] = pd.concat([dados_mes.get("tarefas", pd.DataFrame()), nova_t], ignore_index=True)
                 st.session_state.data_selecionada = prazo_t
                 st.success("Salvo!")
                 st.rerun()
@@ -333,16 +333,16 @@ if st.session_state.menu_ativo == "Painel de Controle":
         
         tarefas_para_editar = dados_mes.get("tarefas", pd.DataFrame(columns=["Título", "Contexto", "Prioridade", "Status", "Prazo"]))
         
-        st.session_state.historico[mes_sel]["tarefas"] = st.data_editor(
+        res_tarefas = st.data_editor(
             tarefas_para_editar, 
             num_rows="dynamic", 
             use_container_width=True,
             column_config={
                 "Prioridade": st.column_config.SelectboxColumn("Prioridade", options=["🔴 Alta", "🟡 Média", "🟢 Baixa"]),
                 "Status": st.column_config.SelectboxColumn("Status", options=["A Fazer", "Em Andamento", "Concluído"])
-            },
-            key=f"editor_tarefas_{mes_sel}"
+            }
         )
+        st.session_state.historico[mes_sel]["tarefas"] = res_tarefas
 
 # Módulo 2: Financeiro & Gastos
 elif st.session_state.menu_ativo == "Financeiro & Gastos":
@@ -353,45 +353,45 @@ elif st.session_state.menu_ativo == "Financeiro & Gastos":
     
     with aba_rendas:
         st.markdown("#### Entradas do Mês")
-        st.session_state.historico[mes_sel]["rendas"] = st.data_editor(
+        res_rendas = st.data_editor(
             dados_mes["rendas"], 
             num_rows="dynamic", 
             use_container_width=True,
             column_config={
                 "Valor Previsto": st.column_config.NumberColumn("Valor Previsto", format="R$ %.2f"),
                 "Valor Recebido": st.column_config.NumberColumn("Valor Recebido", format="R$ %.2f")
-            },
-            key=f"editor_rendas_{mes_sel}"
+            }
         )
+        st.session_state.historico[mes_sel]["rendas"] = res_rendas
 
     with aba_despesas:
         st.markdown("#### Despesas & Contas")
-        st.session_state.historico[mes_sel]["gastos"] = st.data_editor(
+        res_gastos = st.data_editor(
             dados_mes["gastos"], 
             num_rows="dynamic", 
             use_container_width=True,
             column_config={
                 "Valor": st.column_config.NumberColumn("Valor", format="R$ %.2f"),
                 "Status": st.column_config.SelectboxColumn("Status", options=["Pendente", "Pago"])
-            },
-            key=f"editor_gastos_{mes_sel}"
+            }
         )
+        st.session_state.historico[mes_sel]["gastos"] = res_gastos
 
-# Módulo 3: Aba de Metas e Prazos (Isolada com Histórico de Aportes)
+# Módulo 3: Aba de Metas e Prazos (Isolada)
 elif st.session_state.menu_ativo == "Metas & Prazos":
     st.markdown("### Aba de Metas e Prazos (Isolada)")
     st.caption("ℹ️ **Regra de Escopo:** Os valores cadastrados aqui ficam restritos a esta aba e não entram no cálculo de despesas mensais.")
     
-    st.session_state.metas = st.data_editor(
+    res_metas = st.data_editor(
         st.session_state.metas, 
         num_rows="dynamic", 
         use_container_width=True, 
         column_config={
             "Valor Alvo (R$)": st.column_config.NumberColumn("Valor Alvo (R$)", format="R$ %.2f"),
             "Valor Já Guardado": st.column_config.NumberColumn("Valor Já Guardado", format="R$ %.2f")
-        },
-        key="editor_metas_isolado"
+        }
     )
+    st.session_state.metas = res_metas
     
     st.markdown("---")
     st.markdown("#### Progresso & Aporte Mensal Sugerido")
@@ -406,7 +406,7 @@ elif st.session_state.menu_ativo == "Metas & Prazos":
         
         col_m1, col_m2 = st.columns([3, 1])
         with col_m1:
-            st.write(f"**{row['Nome da Meta']}** — Guardado: {formata_reais(val_guardado)} de {formata_reais(val_alvo)} | Prazo: {row['Prazo']}")
+            st.write(f"**{row['Nome da Meta']}** — Guardado: **{formata_reais(val_guardado)}** de **{formata_reais(val_alvo)}** | **Falta: {formata_reais(falta)}** | Prazo: {row['Prazo']}")
             st.progress(pct)
         with col_m2:
             st.caption(f"Aporte Sugerido: **{formata_reais(aporte_sugerido)} /mês**")
@@ -426,7 +426,6 @@ elif st.session_state.menu_ativo == "Metas & Prazos":
             data_reg = st.date_input("Data do Registro:", datetime.date.today())
             
             if st.form_submit_button("Salvar Aporte do Mês", use_container_width=True):
-                # Registra o histórico
                 novo_ap = pd.DataFrame([{
                     "Nome da Meta": meta_escolhida,
                     "Mês / Referência": mes_ref_aporte,
@@ -435,7 +434,6 @@ elif st.session_state.menu_ativo == "Metas & Prazos":
                 }])
                 st.session_state.historico_aportes = pd.concat([st.session_state.historico_aportes, novo_ap], ignore_index=True)
                 
-                # Atualiza automaticamente o acumulado "Valor Já Guardado" na tabela de Metas
                 idx_meta = st.session_state.metas[st.session_state.metas["Nome da Meta"] == meta_escolhida].index
                 if not idx_meta.empty:
                     val_antigo = float(st.session_state.metas.loc[idx_meta[0], "Valor Já Guardado"])
@@ -446,15 +444,15 @@ elif st.session_state.menu_ativo == "Metas & Prazos":
 
     with col_ap2:
         st.markdown("##### 📜 Extrato de Aportes Realizados no Tempo")
-        st.session_state.historico_aportes = st.data_editor(
+        res_aportes = st.data_editor(
             st.session_state.historico_aportes,
             num_rows="dynamic",
             use_container_width=True,
             column_config={
                 "Valor Aportado (R$)": st.column_config.NumberColumn("Valor Aportado (R$)", format="R$ %.2f")
-            },
-            key="editor_historico_aportes"
+            }
         )
+        st.session_state.historico_aportes = res_aportes
 
 # Módulo 4: Importar Planilhas
 elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
