@@ -3,15 +3,15 @@ import pandas as pd
 import datetime
 import calendar
 
-# Configuração da página - Layout Wide
+# Configuração da página
 st.set_page_config(
-    page_title="Painel de Controle Pessoal",
-    page_icon="🗓️",
+    page_title="Painel de Gestão Pessoal",
+    page_icon="⚖️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# FUNÇÃO AUXILIAR PARA FORMATAR MOEDA NO PADRÃO BRASILEIRO (R$ 1.000,00)
+# FORMATADOR DE MOEDA BRASILEIRA (R$ 1.000,00)
 def formata_reais(valor):
     try:
         val = float(valor)
@@ -19,7 +19,7 @@ def formata_reais(valor):
     except (ValueError, TypeError):
         return "R$ 0,00"
 
-# Estilização CSS (Design System Hybrid Dark/Light)
+# ESTILIZAÇÃO CSS (Inspirada na UI Juris Control)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
@@ -147,7 +147,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Inicialização Global da Sessão
+# INICIALIZAÇÃO DA SESSÃO GLOBAL
 if 'menu_ativo' not in st.session_state:
     st.session_state.menu_ativo = "Painel de Controle"
 
@@ -195,10 +195,10 @@ if 'historico_aportes' not in st.session_state:
         {"Nome da Meta": "DENTISTA (DR. GUSTAVO)", "Mês / Referência": "07/2026", "Valor Aportado (R$)": 600.0, "Data do Lançamento": "01/07/2026"}
     ])
 
-# Menu Lateral
+# NAVEGAÇÃO LATERAL (SIDEBAR)
 with st.sidebar:
     st.markdown("### Painel Pessoal")
-    st.caption("v1.0.0 | Acesso ADM")
+    st.caption("v5.2.0 | Acesso ADM")
     st.divider()
     
     if st.button("Painel de Controle", key="btn_painel", use_container_width=True):
@@ -237,13 +237,13 @@ dados_mes = st.session_state.historico[mes_sel]
 if "tarefas" not in dados_mes:
     dados_mes["tarefas"] = pd.DataFrame(columns=["Título", "Contexto", "Prioridade", "Status", "Prazo"])
 
-# Recálculo Automático Dinâmico
+# CÁLCULOS DINÂMICOS
 total_entradas = float(dados_mes["rendas"]["Valor Recebido"].sum()) if ("Valor Recebido" in dados_mes["rendas"].columns and not dados_mes["rendas"].empty) else 0.0
 total_gastos = float(dados_mes["gastos"]["Valor"].sum()) if ("Valor" in dados_mes["gastos"].columns and not dados_mes["gastos"].empty) else 0.0
 saldo_restante = total_entradas - total_gastos
 
-# Topbar
-st.markdown("## Painel de Controle (Modo ADM)")
+# TOPBAR INSPIRADA NA UI (CARDS DE RESUMO)
+st.markdown("## Painel de Controle")
 c_top1, c_top2, c_top3, c_top4 = st.columns(4)
 c_top1.metric(f"Total Recebido ({mes_sel})", formata_reais(total_entradas))
 c_top2.metric("Total Gasto", formata_reais(total_gastos))
@@ -253,7 +253,7 @@ c_top4.metric("Contas Pendentes", contas_pend)
 
 st.divider()
 
-# Módulo 1: Painel de Controle (Agenda + Drawer)
+# MÓDULO 1: PAINEL DE CONTROLE (AGENDA + TAREFAS)
 if st.session_state.menu_ativo == "Painel de Controle":
     col_agenda, col_drawer = st.columns([2.2, 1])
     
@@ -344,10 +344,10 @@ if st.session_state.menu_ativo == "Painel de Controle":
         )
         st.session_state.historico[mes_sel]["tarefas"] = res_tarefas
 
-# Módulo 2: Financeiro & Gastos
+# MÓDULO 2: FINANCEIRO & GASTOS
 elif st.session_state.menu_ativo == "Financeiro & Gastos":
     st.markdown(f"### Painel Financeiro - Referência {mes_sel}")
-    st.caption("💡 Qualquer edição feita abaixo é salva instantaneamente ao pressionar Enter:")
+    st.caption("💡 Edição instantânea célula a célula:")
     
     aba_rendas, aba_despesas = st.tabs(["💵 Rendas / Salários", "💸 Despesas & Gastos"])
     
@@ -377,7 +377,7 @@ elif st.session_state.menu_ativo == "Financeiro & Gastos":
         )
         st.session_state.historico[mes_sel]["gastos"] = res_gastos
 
-# Módulo 3: Aba de Metas e Prazos (Isolada)
+# MÓDULO 3: METAS E PRAZOS (ISOLADA)
 elif st.session_state.menu_ativo == "Metas & Prazos":
     st.markdown("### Aba de Metas e Prazos (Isolada)")
     st.caption("ℹ️ **Regra de Escopo:** Os valores cadastrados aqui ficam restritos a esta aba e não entram no cálculo de despesas mensais.")
@@ -454,7 +454,7 @@ elif st.session_state.menu_ativo == "Metas & Prazos":
         )
         st.session_state.historico_aportes = res_aportes
 
-# Módulo 4: Importar Planilhas
+# MÓDULO 4: IMPORTAR PLANILHAS
 elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
     st.markdown("### 📥 Importador Minucioso de Planilhas Excel")
     st.write("Envie seus arquivos `.xlsx` para distribuição automática e estruturada:")
@@ -512,7 +512,7 @@ elif st.session_state.menu_ativo == "Importar Planilhas (IA)":
                 except Exception as e:
                     st.error(f"Erro ao processar `{arq.name}`: {e}")
 
-# Módulo 5: Histórico
+# MÓDULO 5: HISTÓRICO
 elif st.session_state.menu_ativo == "Histórico & Relatórios":
     st.markdown("### Relatórios do Mês")
     st.dataframe(dados_mes["gastos"], use_container_width=True)
